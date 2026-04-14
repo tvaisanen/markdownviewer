@@ -1,0 +1,79 @@
+name: MarkdownViewer
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+packages:
+  swift-cmark:
+    url: https://github.com/apple/swift-cmark
+    from: 0.6.0
+targets:
+  MarkdownViewerKit:
+    type: framework
+    platform: macOS
+    sources:
+      - Sources/MarkdownViewerKit
+    dependencies:
+      - package: swift-cmark
+        product: cmark-gfm
+    settings:
+      SWIFT_VERSION: "6.0"
+    info:
+      path: Sources/MarkdownViewerKit/Info.plist
+      properties:
+        CFBundleName: MarkdownViewerKit
+        CFBundleIdentifier: com.tvaisanen.markdownviewerkit
+        CFBundleVersion: "1"
+        CFBundleShortVersionString: "0.1.0"
+        CFBundlePackageType: FMWK
+        CFBundleExecutable: MarkdownViewerKit
+  MarkdownViewer:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/MarkdownViewer
+    resources:
+      - path: Resources
+        buildPhase: resources
+    dependencies:
+      - target: MarkdownViewerKit
+    settings:
+      SWIFT_VERSION: "6.0"
+      INFOPLIST_FILE: Sources/MarkdownViewer/Info.plist
+    info:
+      path: Sources/MarkdownViewer/Info.plist
+      properties:
+        CFBundleName: MarkdownViewer
+        CFBundleDisplayName: MarkdownViewer
+        CFBundleIdentifier: com.tvaisanen.markdownviewer
+        CFBundleVersion: "1"
+        CFBundleShortVersionString: "0.1.0"
+        CFBundlePackageType: APPL
+        CFBundleExecutable: MarkdownViewer
+        NSPrincipalClass: NSApplication
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Markdown Document
+            CFBundleTypeRole: Viewer
+            LSItemContentTypes:
+              - net.daringfireball.markdown
+            LSHandlerRank: Default
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: net.daringfireball.markdown
+            UTTypeDescription: Markdown Document
+            UTTypeConformsTo:
+              - public.plain-text
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - md
+                - markdown
+                - mdown
+  MarkdownViewerKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/MarkdownViewerKitTests
+    dependencies:
+      - target: MarkdownViewerKit
+    settings:
+      SWIFT_VERSION: "6.0"
