@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <script src="mermaid.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            mermaid.initialize({ startOnLoad: true, theme: 'default' });
+        });
+
+        function setMermaidTheme(theme) {
+            mermaid.initialize({ startOnLoad: false, theme: theme });
+            document.querySelectorAll('.mermaid').forEach(function(el) {
+                var source = el.getAttribute('data-source');
+                if (source) {
+                    el.removeAttribute('data-processed');
+                    el.innerHTML = source;
+                }
+            });
+            mermaid.run();
+        }
+    </script>
+</head>
+<body>
+{{CONTENT}}
+</body>
+</html>
