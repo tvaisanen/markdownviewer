@@ -1,5 +1,6 @@
 import Cocoa
 
+@MainActor
 protocol SidebarDelegate: AnyObject {
     func sidebarDidSelectFile(at index: Int)
     func sidebarDidRequestCloseFile(at index: Int)
