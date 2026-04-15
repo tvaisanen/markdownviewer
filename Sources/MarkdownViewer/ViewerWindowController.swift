@@ -53,6 +53,8 @@ final class ViewerWindowController: NSWindowController {
         splitViewController.sidebarViewController.delegate = self
         splitViewController.tocViewController.delegate = self
         loadTemplate()
+
+        window.restoreAndTrackFrame()
     }
 
     private func makeStatusBar() -> NSView {
