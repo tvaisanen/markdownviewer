@@ -3,7 +3,7 @@ import Cocoa
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
 
-    private var windowController: ViewerWindowController!
+    private let windowController = ViewerWindowController()
     private var appearanceObservation: NSKeyValueObservation?
     private var openedViaAppleEvent = false
 
@@ -13,7 +13,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        windowController = ViewerWindowController()
         windowController.window?.makeKeyAndOrderFront(nil)
 
         observeAppearanceChanges()

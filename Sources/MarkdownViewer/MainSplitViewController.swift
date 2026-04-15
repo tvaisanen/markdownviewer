@@ -12,7 +12,7 @@ final class MainSplitViewController: NSSplitViewController {
         sidebarItem.canCollapse = true
         sidebarItem.minimumThickness = 180
         sidebarItem.maximumThickness = 300
-        sidebarItem.collapseBehavior = .preferResizingSplitViewWithFixedSiblings
+        sidebarItem.collapseBehavior = .preferResizingSiblingsWithFixedSplitView
 
         let contentItem = NSSplitViewItem(viewController: contentViewController)
         contentItem.minimumThickness = 400

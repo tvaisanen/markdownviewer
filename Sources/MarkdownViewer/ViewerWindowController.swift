@@ -19,9 +19,72 @@ final class ViewerWindowController: NSWindowController {
     init() {
         let window = ViewerWindow()
         super.init(window: window)
-        window.contentViewController = splitViewController
+
+        // Build container: split view + bottom status bar
+        let containerView = NSView()
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+
+        let splitView = splitViewController.view
+        splitView.translatesAutoresizingMaskIntoConstraints = false
+
+        let statusBar = makeStatusBar()
+
+        containerView.addSubview(splitView)
+        containerView.addSubview(statusBar)
+        NSLayoutConstraint.activate([
+            splitView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            splitView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            splitView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            splitView.bottomAnchor.constraint(equalTo: statusBar.topAnchor),
+
+            statusBar.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            statusBar.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            statusBar.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            statusBar.heightAnchor.constraint(equalToConstant: 28),
+        ])
+
+        let containerVC = NSViewController()
+        containerVC.view = containerView
+        containerVC.addChild(splitViewController)
+
+        window.contentViewController = containerVC
         splitViewController.sidebarViewController.delegate = self
         loadTemplate()
+    }
+
+    private func makeStatusBar() -> NSView {
+        let bar = NSView()
+        bar.translatesAutoresizingMaskIntoConstraints = false
+        bar.wantsLayer = true
+
+        // Top border
+        let border = NSBox()
+        border.boxType = .separator
+        border.translatesAutoresizingMaskIntoConstraints = false
+        bar.addSubview(border)
+        NSLayoutConstraint.activate([
+            border.topAnchor.constraint(equalTo: bar.topAnchor),
+            border.leadingAnchor.constraint(equalTo: bar.leadingAnchor),
+            border.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
+        ])
+
+        let sidebarToggle = NSButton(
+            image: NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Toggle Sidebar")!,
+            target: nil,
+            action: #selector(NSSplitViewController.toggleSidebar(_:))
+        )
+        sidebarToggle.bezelStyle = .accessoryBarAction
+        sidebarToggle.isBordered = false
+        sidebarToggle.toolTip = "Toggle Sidebar (⌃⌘S)"
+        sidebarToggle.translatesAutoresizingMaskIntoConstraints = false
+
+        bar.addSubview(sidebarToggle)
+        NSLayoutConstraint.activate([
+            sidebarToggle.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 8),
+            sidebarToggle.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+        ])
+
+        return bar
     }
 
     required init?(coder: NSCoder) {

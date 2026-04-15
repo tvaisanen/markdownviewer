@@ -58,20 +58,20 @@ final class SidebarViewController: NSViewController {
     }
 
     private func setupOpenButton() {
-        let button = NSButton(
+        let openButton = NSButton(
             image: NSImage(systemSymbolName: "plus", accessibilityDescription: "Open file")!,
             target: self,
             action: #selector(openFileClicked(_:))
         )
-        button.bezelStyle = .accessoryBarAction
-        button.isBordered = false
-        button.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(button)
+        openButton.bezelStyle = .accessoryBarAction
+        openButton.isBordered = false
+        openButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(openButton)
         NSLayoutConstraint.activate([
-            button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
-            button.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
-            button.widthAnchor.constraint(equalToConstant: 24),
-            button.heightAnchor.constraint(equalToConstant: 24),
+            openButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
+            openButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
+            openButton.widthAnchor.constraint(equalToConstant: 24),
+            openButton.heightAnchor.constraint(equalToConstant: 24),
         ])
     }
 
