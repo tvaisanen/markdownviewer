@@ -28,6 +28,7 @@
 		B9F7C161BB3AB934D5C1CEC1 /* style.css in Resources */ = {isa = PBXBuildFile; fileRef = 89D825275698071222326B78 /* style.css */; };
 		BBDF60B3959AB10B28FCEEDD /* DiagramProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DCAE8E79487E6C07DF85975 /* DiagramProcessor.swift */; };
 		CB777C0C91EBEACB50EC2EED /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 234D33278E0616DCC450FA28 /* AppDelegate.swift */; };
+		E37E0F1B20ECD8F0FFF221BE /* MainSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CAEE89422C08892F636BD5 /* MainSplitViewController.swift */; };
 		E806463701934124C3588A3C /* ViewerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C985260250692CE4CB76C598 /* ViewerWindow.swift */; };
 		E9909F1CC65763F8C5C9EBA6 /* MarkdownRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F5C5EE3423FB080FDD7FFE /* MarkdownRendererTests.swift */; };
 		FDA05F80D1997C0E8A84ADB3 /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = B23ECC117B77002FFC5CD0B6 /* FileWatcher.swift */; };
@@ -93,6 +94,7 @@
 		ACFB8E847ADCB207A22AE3DD /* template.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = template.html; sourceTree = "<group>"; };
 		AEB9526E9EDC4D0E511BC0ED /* WebContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebContentView.swift; sourceTree = "<group>"; };
 		B23ECC117B77002FFC5CD0B6 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
+		B5CAEE89422C08892F636BD5 /* MainSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainSplitViewController.swift; sourceTree = "<group>"; };
 		C985260250692CE4CB76C598 /* ViewerWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewerWindow.swift; sourceTree = "<group>"; };
 		D51DB94143B8B80E6C5BED9C /* MermaidRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MermaidRendererTests.swift; sourceTree = "<group>"; };
 		DF5D9FAF62237B0B2E239274 /* MarkdownRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownRenderer.swift; sourceTree = "<group>"; };
@@ -180,6 +182,7 @@
 				4A39FBE99D0FE66B8804D7B1 /* ContentViewController.swift */,
 				A9A85B4E553ED6329F81C703 /* Info.plist */,
 				1AF65BB584EA726EC55E0316 /* main.swift */,
+				B5CAEE89422C08892F636BD5 /* MainSplitViewController.swift */,
 				AAC533573D476B323BEE2801 /* SidebarViewController.swift */,
 				C985260250692CE4CB76C598 /* ViewerWindow.swift */,
 				45C0421FA4B51069DF7EE285 /* ViewerWindowController.swift */,
@@ -321,6 +324,7 @@
 			files = (
 				CB777C0C91EBEACB50EC2EED /* AppDelegate.swift in Sources */,
 				43307509CE67F1BD09AB8CE6 /* ContentViewController.swift in Sources */,
+				E37E0F1B20ECD8F0FFF221BE /* MainSplitViewController.swift in Sources */,
 				9083F63D316E0496C752F73B /* SidebarViewController.swift in Sources */,
 				E806463701934124C3588A3C /* ViewerWindow.swift in Sources */,
 				93D3C1341B68DEE1588D498B /* ViewerWindowController.swift in Sources */,
