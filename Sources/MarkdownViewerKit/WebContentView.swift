@@ -59,6 +59,26 @@ public final class WebContentView: NSView, WKNavigationDelegate {
         }
     }
 
+    /// Scroll to a heading in the rendered content.
+    public func scrollToHeading(text: String, level: Int) {
+        let escapedText = text
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+            .replacingOccurrences(of: "\n", with: "")
+        let js = """
+        (function() {
+            const headings = document.querySelectorAll('h\(level)');
+            for (const h of headings) {
+                if (h.textContent.trim() === '\(escapedText)') {
+                    h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    break;
+                }
+            }
+        })();
+        """
+        webView.evaluateJavaScript(js) { _, _ in }
+    }
+
     // MARK: - WKNavigationDelegate
 
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
