@@ -47,6 +47,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        windowController.window?.saveFrame(usingName: "MarkdownViewerWindow")
+    }
+
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
         return true
     }
