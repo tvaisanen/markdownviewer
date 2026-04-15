@@ -12,7 +12,9 @@ final class ViewerWindow: NSWindow {
         )
         self.tabbingMode = .disallowed
         self.title = "MarkdownViewer"
-        self.center()
         self.setFrameAutosaveName("MarkdownViewerWindow")
+        if !self.setFrameUsingName("MarkdownViewerWindow") {
+            self.center()
+        }
     }
 }

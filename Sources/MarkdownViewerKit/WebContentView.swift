@@ -23,6 +23,7 @@ public final class WebContentView: NSView, WKNavigationDelegate {
 
     private func setupWebView() {
         webView.navigationDelegate = self
+        webView.appearance = NSAppearance(named: .aqua)
         webView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(webView)
         NSLayoutConstraint.activate([

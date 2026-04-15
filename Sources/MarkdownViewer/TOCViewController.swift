@@ -84,8 +84,8 @@ extension TOCViewController: NSTableViewDelegate {
         let heading = headings[row]
         if let textField = cellView.viewWithTag(100) as? NSTextField {
             textField.stringValue = heading.text
-            // Indent by heading level: h1 = 8pt, h2 = 24pt, h3 = 40pt, etc.
-            let indent = CGFloat(8 + (heading.level - 1) * 16)
+            // Indent by heading level: h1 = 0pt, h2 = 6pt, h3 = 12pt, etc.
+            let indent = CGFloat((heading.level - 1) * 6)
 
             // Remove old leading constraint and add new one
             textField.constraints.forEach { c in

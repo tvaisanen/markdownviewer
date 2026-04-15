@@ -42,7 +42,7 @@ final class ViewerWindowController: NSWindowController {
             statusBar.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             statusBar.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
             statusBar.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-            statusBar.heightAnchor.constraint(equalToConstant: 28),
+            statusBar.heightAnchor.constraint(equalToConstant: 34),
         ])
 
         let containerVC = NSViewController()
@@ -70,65 +70,110 @@ final class ViewerWindowController: NSWindowController {
             border.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
         ])
 
-        filesButton = NSButton(
-            image: NSImage(systemSymbolName: "doc.text", accessibilityDescription: "Files")!,
+        filesButton = Self.makeToggleButton(
+            symbolName: "doc.text",
+            tooltip: "Files",
             target: self,
             action: #selector(showFilesMode(_:))
         )
-        filesButton.bezelStyle = .accessoryBarAction
-        filesButton.isBordered = false
-        filesButton.toolTip = "Files"
-        filesButton.state = .on  // Files mode active by default
+        filesButton.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.08).cgColor
+        filesButton.contentTintColor = .labelColor
 
-        tocButton = NSButton(
-            image: NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Table of Contents")!,
+        tocButton = Self.makeToggleButton(
+            symbolName: "sidebar.leading",
+            tooltip: "Table of Contents",
             target: self,
             action: #selector(showTOCMode(_:))
         )
-        tocButton.bezelStyle = .accessoryBarAction
-        tocButton.isBordered = false
-        tocButton.toolTip = "Table of Contents"
-        tocButton.state = .off
-
-        let sidebarToggle = NSButton(
-            image: NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: "Toggle Sidebar")!,
-            target: nil,
-            action: #selector(NSSplitViewController.toggleSidebar(_:))
-        )
-        sidebarToggle.bezelStyle = .accessoryBarAction
-        sidebarToggle.isBordered = false
-        sidebarToggle.toolTip = "Toggle Sidebar (⌃⌘S)"
 
         let modeStack = NSStackView(views: [filesButton, tocButton])
         modeStack.orientation = .horizontal
-        modeStack.spacing = 2
+        modeStack.spacing = 4
         modeStack.translatesAutoresizingMaskIntoConstraints = false
 
-        sidebarToggle.translatesAutoresizingMaskIntoConstraints = false
-
-        bar.addSubview(sidebarToggle)
         bar.addSubview(modeStack)
         NSLayoutConstraint.activate([
-            sidebarToggle.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 8),
-            sidebarToggle.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
-            modeStack.leadingAnchor.constraint(equalTo: sidebarToggle.trailingAnchor, constant: 8),
+            modeStack.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 12),
             modeStack.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
         ])
 
         return bar
     }
 
+    private static func makeToggleButton(symbolName: String, tooltip: String, target: AnyObject?, action: Selector) -> NSButton {
+        let button = NSButton(frame: NSRect(x: 0, y: 0, width: 20, height: 20))
+        button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: tooltip)?
+            .withSymbolConfiguration(.init(pointSize: 11, weight: .medium))
+        button.target = target
+        button.action = action
+        button.setButtonType(.momentaryPushIn)
+        button.bezelStyle = .smallSquare
+        button.isBordered = false
+        button.imagePosition = .imageOnly
+        button.wantsLayer = true
+        button.layer?.cornerRadius = 3
+        button.contentTintColor = .secondaryLabelColor
+        button.toolTip = tooltip
+        button.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 20),
+            button.heightAnchor.constraint(equalToConstant: 20),
+        ])
+        return button
+    }
+
+    private func updateButtonStates() {
+        let filesActive = splitViewController.currentMode == .files && !isSidebarCollapsed
+        let tocActive = splitViewController.currentMode == .toc && !isSidebarCollapsed
+
+        filesButton.layer?.backgroundColor = filesActive
+            ? NSColor.labelColor.withAlphaComponent(0.08).cgColor : nil
+        filesButton.contentTintColor = filesActive ? .labelColor : .secondaryLabelColor
+
+        tocButton.layer?.backgroundColor = tocActive
+            ? NSColor.labelColor.withAlphaComponent(0.08).cgColor : nil
+        tocButton.contentTintColor = tocActive ? .labelColor : .secondaryLabelColor
+    }
+
     @objc private func showFilesMode(_ sender: Any?) {
-        splitViewController.switchSidebar(to: .files)
-        filesButton.state = .on
-        tocButton.state = .off
+        if splitViewController.currentMode == .files && !isSidebarCollapsed {
+            collapseSidebar()
+        } else {
+            splitViewController.switchSidebar(to: .files)
+            expandSidebar()
+        }
+        updateButtonStates()
     }
 
     @objc private func showTOCMode(_ sender: Any?) {
-        splitViewController.switchSidebar(to: .toc)
-        filesButton.state = .off
-        tocButton.state = .on
-        updateTOC()
+        if splitViewController.currentMode == .toc && !isSidebarCollapsed {
+            collapseSidebar()
+        } else {
+            splitViewController.switchSidebar(to: .toc)
+            expandSidebar()
+            updateTOC()
+        }
+        updateButtonStates()
+    }
+
+    private var isSidebarCollapsed: Bool {
+        splitViewController.splitViewItems.first?.isCollapsed ?? true
+    }
+
+    private func collapseSidebar() {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            context.allowsImplicitAnimation = true
+            splitViewController.splitViewItems.first?.animator().isCollapsed = true
+        }
+    }
+
+    private func expandSidebar() {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            context.allowsImplicitAnimation = true
+            splitViewController.splitViewItems.first?.animator().isCollapsed = false
+        }
     }
 
     private func updateTOC() {
