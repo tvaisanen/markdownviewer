@@ -1,6 +1,7 @@
 import Cocoa
 import MarkdownViewerKit
 
+@MainActor
 protocol TOCDelegate: AnyObject {
     func tocDidSelectHeading(_ heading: Heading)
 }

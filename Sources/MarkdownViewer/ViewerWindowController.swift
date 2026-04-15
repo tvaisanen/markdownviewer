@@ -12,6 +12,8 @@ final class ViewerWindowController: NSWindowController {
 
     private var openFiles: [OpenFile] = []
     private var selectedIndex: Int = -1
+    private var filesButton: NSButton!
+    private var tocButton: NSButton!
     private let renderer = MarkdownRenderer()
     private var templateHTML: String = ""
     private let splitViewController = MainSplitViewController()
@@ -49,6 +51,7 @@ final class ViewerWindowController: NSWindowController {
 
         window.contentViewController = containerVC
         splitViewController.sidebarViewController.delegate = self
+        splitViewController.tocViewController.delegate = self
         loadTemplate()
     }
 
@@ -57,7 +60,6 @@ final class ViewerWindowController: NSWindowController {
         bar.translatesAutoresizingMaskIntoConstraints = false
         bar.wantsLayer = true
 
-        // Top border
         let border = NSBox()
         border.boxType = .separator
         border.translatesAutoresizingMaskIntoConstraints = false
@@ -68,23 +70,73 @@ final class ViewerWindowController: NSWindowController {
             border.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
         ])
 
+        filesButton = NSButton(
+            image: NSImage(systemSymbolName: "doc.text", accessibilityDescription: "Files")!,
+            target: self,
+            action: #selector(showFilesMode(_:))
+        )
+        filesButton.bezelStyle = .accessoryBarAction
+        filesButton.isBordered = false
+        filesButton.toolTip = "Files"
+        filesButton.state = .on  // Files mode active by default
+
+        tocButton = NSButton(
+            image: NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Table of Contents")!,
+            target: self,
+            action: #selector(showTOCMode(_:))
+        )
+        tocButton.bezelStyle = .accessoryBarAction
+        tocButton.isBordered = false
+        tocButton.toolTip = "Table of Contents"
+        tocButton.state = .off
+
         let sidebarToggle = NSButton(
-            image: NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Toggle Sidebar")!,
+            image: NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: "Toggle Sidebar")!,
             target: nil,
             action: #selector(NSSplitViewController.toggleSidebar(_:))
         )
         sidebarToggle.bezelStyle = .accessoryBarAction
         sidebarToggle.isBordered = false
         sidebarToggle.toolTip = "Toggle Sidebar (⌃⌘S)"
+
+        let modeStack = NSStackView(views: [filesButton, tocButton])
+        modeStack.orientation = .horizontal
+        modeStack.spacing = 2
+        modeStack.translatesAutoresizingMaskIntoConstraints = false
+
         sidebarToggle.translatesAutoresizingMaskIntoConstraints = false
 
         bar.addSubview(sidebarToggle)
+        bar.addSubview(modeStack)
         NSLayoutConstraint.activate([
             sidebarToggle.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 8),
             sidebarToggle.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+            modeStack.leadingAnchor.constraint(equalTo: sidebarToggle.trailingAnchor, constant: 8),
+            modeStack.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
         ])
 
         return bar
+    }
+
+    @objc private func showFilesMode(_ sender: Any?) {
+        splitViewController.switchSidebar(to: .files)
+        filesButton.state = .on
+        tocButton.state = .off
+    }
+
+    @objc private func showTOCMode(_ sender: Any?) {
+        splitViewController.switchSidebar(to: .toc)
+        filesButton.state = .off
+        tocButton.state = .on
+        updateTOC()
+    }
+
+    private func updateTOC() {
+        guard selectedIndex >= 0 && selectedIndex < openFiles.count else { return }
+        let url = openFiles[selectedIndex].url
+        guard let markdown = try? String(contentsOf: url, encoding: .utf8) else { return }
+        let headings = HeadingExtractor.extract(from: markdown)
+        splitViewController.tocViewController.updateHeadings(headings)
     }
 
     required init?(coder: NSCoder) {
@@ -152,6 +204,10 @@ final class ViewerWindowController: NSWindowController {
 
         renderSelectedFile()
         window?.title = openFiles[index].url.lastPathComponent
+
+        if splitViewController.currentMode == .toc {
+            updateTOC()
+        }
     }
 
     private func renderSelectedFile() {
@@ -199,6 +255,14 @@ final class ViewerWindowController: NSWindowController {
                 openFile(url: url)
             }
         }
+    }
+}
+
+// MARK: - TOCDelegate
+
+extension ViewerWindowController: TOCDelegate {
+    func tocDidSelectHeading(_ heading: Heading) {
+        splitViewController.contentViewController.webContentView.scrollToHeading(text: heading.text, level: heading.level)
     }
 }
 
