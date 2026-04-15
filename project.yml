@@ -33,8 +33,8 @@ targets:
     platform: macOS
     sources:
       - Sources/MarkdownViewer
-    resources:
       - path: Resources
+        type: group
         buildPhase: resources
     dependencies:
       - target: MarkdownViewerKit
