@@ -6,7 +6,7 @@ public final class FileWatcher: @unchecked Sendable {
     private var fileDescriptor: Int32 = -1
     private let debounceInterval: TimeInterval
     private var debounceWorkItem: DispatchWorkItem?
-    private let queue = DispatchQueue(label: "com.tvaisanen.markdownviewer.filewatcher")
+    private let queue = DispatchQueue(label: "com.slantedt.markdownviewer.filewatcher")
 
     public var onChange: (@Sendable () -> Void)?
 

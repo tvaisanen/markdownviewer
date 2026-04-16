@@ -23,7 +23,7 @@ targets:
       path: Sources/MarkdownViewerKit/Info.plist
       properties:
         CFBundleName: MarkdownViewerKit
-        CFBundleIdentifier: com.tvaisanen.markdownviewerkit
+        CFBundleIdentifier: com.slantedt.markdownviewerkit
         CFBundleVersion: "1"
         CFBundleShortVersionString: "0.1.0"
         CFBundlePackageType: FMWK
@@ -46,7 +46,7 @@ targets:
       properties:
         CFBundleName: MarkdownViewer
         CFBundleDisplayName: MarkdownViewer
-        CFBundleIdentifier: com.tvaisanen.markdownviewer
+        CFBundleIdentifier: com.slantedt.markdownviewer
         CFBundleVersion: "1"
         CFBundleShortVersionString: "0.1.0"
         CFBundlePackageType: APPL
