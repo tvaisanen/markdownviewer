@@ -115,48 +115,19 @@ extension SidebarViewController: NSTableViewDataSource {
 extension SidebarViewController: NSTableViewDelegate {
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let identifier = NSUserInterfaceItemIdentifier("FileCell")
-        let cellView: NSTableCellView
+        let cellView: SidebarFileCell
 
-        if let existing = tableView.makeView(withIdentifier: identifier, owner: nil) as? NSTableCellView {
+        if let existing = tableView.makeView(withIdentifier: identifier, owner: nil) as? SidebarFileCell {
             cellView = existing
         } else {
-            cellView = NSTableCellView()
+            cellView = SidebarFileCell()
             cellView.identifier = identifier
-
-            let stackView = NSStackView()
-            stackView.orientation = .vertical
-            stackView.alignment = .leading
-            stackView.spacing = 1
-            stackView.translatesAutoresizingMaskIntoConstraints = false
-
-            let filenameField = NSTextField(labelWithString: "")
-            filenameField.font = .systemFont(ofSize: 13)
-            filenameField.lineBreakMode = .byTruncatingTail
-            filenameField.tag = 100
-
-            let dirField = NSTextField(labelWithString: "")
-            dirField.font = .systemFont(ofSize: 10)
-            dirField.textColor = .secondaryLabelColor
-            dirField.lineBreakMode = .byTruncatingMiddle
-            dirField.tag = 200
-
-            stackView.addArrangedSubview(filenameField)
-            stackView.addArrangedSubview(dirField)
-
-            cellView.addSubview(stackView)
-            NSLayoutConstraint.activate([
-                stackView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                stackView.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4),
-                stackView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-            ])
         }
 
         let item = items[row]
-        if let filenameField = cellView.viewWithTag(100) as? NSTextField {
-            filenameField.stringValue = item.filename
-        }
-        if let dirField = cellView.viewWithTag(200) as? NSTextField {
-            dirField.stringValue = item.parentDirectory
+        cellView.configure(filename: item.filename, directory: item.parentDirectory)
+        cellView.onClose = { [weak self] in
+            self?.delegate?.sidebarDidRequestCloseFile(at: row)
         }
 
         return cellView
