@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		17F06A9CE290CF49B6041213 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF65BB584EA726EC55E0316 /* main.swift */; };
 		1B7C0873DC2D69AEC8F51925 /* PlantUMLRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80F29BC0D22E26EB9ED7BAA /* PlantUMLRenderer.swift */; };
+		29E0CBD49424DE03AB2179A7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80A50D150B6978E4CCBBE2FB /* main.swift */; };
 		2B6F31CC184DE825DEF99523 /* template.html in Resources */ = {isa = PBXBuildFile; fileRef = ACFB8E847ADCB207A22AE3DD /* template.html */; };
 		33453A770C0130FC458DDAA6 /* DiagramProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDCD0B47726C16CFB17CA4B /* DiagramProcessorTests.swift */; };
 		395B85A4DFC505B95C486144 /* MermaidRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51DB94143B8B80E6C5BED9C /* MermaidRendererTests.swift */; };
@@ -87,11 +88,13 @@
 		1FF43CC71D6561F64CDCF7C0 /* MarkdownViewer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MarkdownViewer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		20F1544B2D8C818DF7C90CD3 /* PlantUMLRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantUMLRendererTests.swift; sourceTree = "<group>"; };
 		234D33278E0616DCC450FA28 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		24F5AABC88412A9551496352 /* mdview */ = {isa = PBXFileReference; includeInIndex = 0; path = mdview; sourceTree = BUILT_PRODUCTS_DIR; };
 		45C0421FA4B51069DF7EE285 /* ViewerWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewerWindowController.swift; sourceTree = "<group>"; };
 		4A39FBE99D0FE66B8804D7B1 /* ContentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewController.swift; sourceTree = "<group>"; };
 		5B10C8898505C87E5DC052D1 /* mermaid.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = mermaid.min.js; sourceTree = "<group>"; };
 		689893FBFD5C135EC51AF3C2 /* MarkdownViewerKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MarkdownViewerKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		7DCAE8E79487E6C07DF85975 /* DiagramProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagramProcessor.swift; sourceTree = "<group>"; };
+		80A50D150B6978E4CCBBE2FB /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		89D825275698071222326B78 /* style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = style.css; sourceTree = "<group>"; };
 		A80F29BC0D22E26EB9ED7BAA /* PlantUMLRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantUMLRenderer.swift; sourceTree = "<group>"; };
 		A9A85B4E553ED6329F81C703 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -144,6 +147,7 @@
 				1FF43CC71D6561F64CDCF7C0 /* MarkdownViewer.app */,
 				689893FBFD5C135EC51AF3C2 /* MarkdownViewerKit.framework */,
 				E3AFCF36438A5E4839E10234 /* MarkdownViewerKitTests.xctest */,
+				24F5AABC88412A9551496352 /* mdview */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -167,6 +171,7 @@
 				6A437AC9FFDD1A27A632098A /* MarkdownViewer */,
 				74981641E1FA5F1FCA451C36 /* MarkdownViewerKit */,
 				1CD5F1C3CEB6596349F37B82 /* MarkdownViewerKitTests */,
+				F5266E9706B9C08D268E893A /* mdview */,
 				560373F7C6D2D57E549DA005 /* Resources */,
 				0B1739B5813B62994A3DCB3C /* Products */,
 			);
@@ -215,6 +220,15 @@
 			path = Sources/MarkdownViewerKit;
 			sourceTree = "<group>";
 		};
+		F5266E9706B9C08D268E893A /* mdview */ = {
+			isa = PBXGroup;
+			children = (
+				80A50D150B6978E4CCBBE2FB /* main.swift */,
+			);
+			name = mdview;
+			path = Sources/mdview;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -236,6 +250,23 @@
 			productName = MarkdownViewerKit;
 			productReference = 689893FBFD5C135EC51AF3C2 /* MarkdownViewerKit.framework */;
 			productType = "com.apple.product-type.framework";
+		};
+		C4ABF9963DC4055CBD930E43 /* mdview */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 149FC3BD5149BDBF08A18F3E /* Build configuration list for PBXNativeTarget "mdview" */;
+			buildPhases = (
+				9466485E2D87742E5827FFBF /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = mdview;
+			packageProductDependencies = (
+			);
+			productName = mdview;
+			productReference = 24F5AABC88412A9551496352 /* mdview */;
+			productType = "com.apple.product-type.tool";
 		};
 		C4E5DA625FB9289E18F003C5 /* MarkdownViewerKitTests */ = {
 			isa = PBXNativeTarget;
@@ -309,6 +340,7 @@
 				C67E8A6179C1E98775DBDA09 /* MarkdownViewer */,
 				0B6122A7BE2836344DFEBF11 /* MarkdownViewerKit */,
 				C4E5DA625FB9289E18F003C5 /* MarkdownViewerKitTests */,
+				C4ABF9963DC4055CBD930E43 /* mdview */,
 			);
 		};
 /* End PBXProject section */
@@ -339,6 +371,14 @@
 				E806463701934124C3588A3C /* ViewerWindow.swift in Sources */,
 				93D3C1341B68DEE1588D498B /* ViewerWindowController.swift in Sources */,
 				17F06A9CE290CF49B6041213 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9466485E2D87742E5827FFBF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				29E0CBD49424DE03AB2179A7 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -416,6 +456,19 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5E5F34251E10DD3158D37F2A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
 				);
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
@@ -523,6 +576,19 @@
 			};
 			name = Debug;
 		};
+		D8A0BAC4FED68614647B228B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 		F18D1208D5B6E6E37B1705E1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -612,6 +678,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		149FC3BD5149BDBF08A18F3E /* Build configuration list for PBXNativeTarget "mdview" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E5F34251E10DD3158D37F2A /* Debug */,
+				D8A0BAC4FED68614647B228B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		35226E63ADFFD5E88C06ECD4 /* Build configuration list for PBXNativeTarget "MarkdownViewerKitTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
