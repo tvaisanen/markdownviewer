@@ -1,7 +1,7 @@
 import Cocoa
 
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private static let mermaidThemeKey = "MermaidTheme"
 

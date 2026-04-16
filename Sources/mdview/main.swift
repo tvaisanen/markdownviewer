@@ -56,7 +56,7 @@ func main() -> Int32 {
         return 1
     }
 
-    return process.terminationStatus
+    return 0
 }
 
 exit(main())

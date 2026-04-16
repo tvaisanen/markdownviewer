@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1070045285646A645D85E7A0 /* cmark-gfm-extensions in Frameworks */ = {isa = PBXBuildFile; productRef = 841B8CBB366405675A0A6A0D /* cmark-gfm-extensions */; };
 		17F06A9CE290CF49B6041213 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF65BB584EA726EC55E0316 /* main.swift */; };
 		1B7C0873DC2D69AEC8F51925 /* PlantUMLRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80F29BC0D22E26EB9ED7BAA /* PlantUMLRenderer.swift */; };
 		29E0CBD49424DE03AB2179A7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80A50D150B6978E4CCBBE2FB /* main.swift */; };
@@ -127,6 +128,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				60A74272417B00C1D96AD588 /* cmark-gfm in Frameworks */,
+				1070045285646A645D85E7A0 /* cmark-gfm-extensions in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -246,6 +248,7 @@
 			name = MarkdownViewerKit;
 			packageProductDependencies = (
 				8A57DC6B665F0735E7B15327 /* cmark-gfm */,
+				841B8CBB366405675A0A6A0D /* cmark-gfm-extensions */,
 			);
 			productName = MarkdownViewerKit;
 			productReference = 689893FBFD5C135EC51AF3C2 /* MarkdownViewerKit.framework */;
@@ -737,6 +740,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		841B8CBB366405675A0A6A0D /* cmark-gfm-extensions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 294B880EEF255E41B007CDE7 /* XCRemoteSwiftPackageReference "swift-cmark" */;
+			productName = "cmark-gfm-extensions";
+		};
 		8A57DC6B665F0735E7B15327 /* cmark-gfm */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 294B880EEF255E41B007CDE7 /* XCRemoteSwiftPackageReference "swift-cmark" */;
