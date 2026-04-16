@@ -27,6 +27,8 @@ final class MainSplitViewController: NSSplitViewController {
 
         addSplitViewItem(sidebarItem)
         addSplitViewItem(contentItem)
+
+        sidebarItem.isCollapsed = true
     }
 
     func switchSidebar(to mode: SidebarMode) {
