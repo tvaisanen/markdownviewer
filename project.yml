@@ -77,3 +77,10 @@ targets:
       - target: MarkdownViewerKit
     settings:
       SWIFT_VERSION: "6.0"
+  mdview:
+    type: tool
+    platform: macOS
+    sources:
+      - Sources/mdview
+    settings:
+      SWIFT_VERSION: "6.0"
