@@ -55,6 +55,7 @@ final class ViewerWindowController: NSWindowController {
         splitViewController.sidebarViewController.delegate = self
         splitViewController.tocViewController.delegate = self
         loadTemplate()
+        splitViewController.contentViewController.webContentView.setBrightness(savedBrightness)
 
         // Add hover zone on left edge for auto-show sidebar
         let hoverZone = SidebarHoverZone(windowController: self)
@@ -105,10 +106,30 @@ final class ViewerWindowController: NSWindowController {
         modeStack.spacing = 4
         modeStack.translatesAutoresizingMaskIntoConstraints = false
 
+        let brightnessIcon = NSImageView()
+        brightnessIcon.image = NSImage(systemSymbolName: "sun.max", accessibilityDescription: "Brightness")?
+            .withSymbolConfiguration(.init(pointSize: 10, weight: .medium))
+        brightnessIcon.contentTintColor = .secondaryLabelColor
+        brightnessIcon.translatesAutoresizingMaskIntoConstraints = false
+
+        let slider = NSSlider(value: savedBrightness, minValue: 0.3, maxValue: 1.0, target: self, action: #selector(brightnessChanged(_:)))
+        slider.controlSize = .mini
+        slider.translatesAutoresizingMaskIntoConstraints = false
+
+        let rightStack = NSStackView(views: [brightnessIcon, slider])
+        rightStack.orientation = .horizontal
+        rightStack.spacing = 4
+        rightStack.translatesAutoresizingMaskIntoConstraints = false
+
         bar.addSubview(modeStack)
+        bar.addSubview(rightStack)
         NSLayoutConstraint.activate([
             modeStack.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 12),
             modeStack.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+
+            rightStack.trailingAnchor.constraint(equalTo: bar.trailingAnchor, constant: -12),
+            rightStack.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+            slider.widthAnchor.constraint(equalToConstant: 80),
         ])
 
         return bar
@@ -215,6 +236,25 @@ final class ViewerWindowController: NSWindowController {
         guard !isSidebarCollapsed && !isSidebarPinned else { return }
         collapseSidebar()
         updateButtonStates()
+    }
+
+    // MARK: - Brightness
+
+    private static let brightnessKey = "ContentBrightness"
+
+    private var savedBrightness: Double {
+        let val = UserDefaults.standard.double(forKey: Self.brightnessKey)
+        return val > 0 ? val : 1.0
+    }
+
+    @objc private func brightnessChanged(_ sender: NSSlider) {
+        let value = sender.doubleValue
+        UserDefaults.standard.set(value, forKey: Self.brightnessKey)
+        splitViewController.contentViewController.webContentView.setBrightness(value)
+    }
+
+    private func applyBrightness() {
+        splitViewController.contentViewController.webContentView.setBrightness(savedBrightness)
     }
 
     private func updateTOC() {

@@ -5,6 +5,9 @@ public final class WebContentView: NSView, WKNavigationDelegate {
 
     private let webView: WKWebView
     private var pendingScrollY: Double = 0
+    private var currentBrightness: Double = 1.0
+    private var currentMermaidTheme: String?
+    private var pageLoaded = false
 
     public override init(frame: NSRect) {
         let config = WKWebViewConfiguration()
@@ -51,13 +54,11 @@ public final class WebContentView: NSView, WKNavigationDelegate {
         webView.loadHTMLString(html, baseURL: baseURL)
     }
 
-    /// Set the Mermaid theme via JS.
+    /// Set the Mermaid theme. Applied immediately if page is loaded, otherwise queued.
     public func setMermaidTheme(_ theme: String) {
-        webView.evaluateJavaScript("setMermaidTheme('\(theme)')") { _, error in
-            if let error {
-                print("Mermaid theme error: \(error)")
-            }
-        }
+        currentMermaidTheme = theme
+        guard pageLoaded else { return }
+        webView.evaluateJavaScript("setMermaidTheme('\(theme)')") { _, _ in }
     }
 
     /// Scroll to a heading in the rendered content.
@@ -80,12 +81,32 @@ public final class WebContentView: NSView, WKNavigationDelegate {
         webView.evaluateJavaScript(js) { _, _ in }
     }
 
+    /// Set content brightness (0.3–1.0).
+    public func setBrightness(_ value: Double) {
+        currentBrightness = max(0.3, min(1.0, value))
+        guard pageLoaded else { return }
+        applyBrightness()
+    }
+
+    private func applyBrightness() {
+        webView.evaluateJavaScript("document.documentElement.style.filter = 'brightness(\(currentBrightness))'") { _, _ in }
+    }
+
     // MARK: - WKNavigationDelegate
 
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        guard pendingScrollY > 0 else { return }
-        let scrollY = pendingScrollY
-        pendingScrollY = 0
-        webView.evaluateJavaScript("window.scrollTo(0, \(scrollY))") { _, _ in }
+        pageLoaded = true
+
+        if pendingScrollY > 0 {
+            let scrollY = pendingScrollY
+            pendingScrollY = 0
+            webView.evaluateJavaScript("window.scrollTo(0, \(scrollY))") { _, _ in }
+        }
+
+        applyBrightness()
+
+        if let theme = currentMermaidTheme {
+            webView.evaluateJavaScript("setMermaidTheme('\(theme)')") { _, _ in }
+        }
     }
 }
