@@ -70,7 +70,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // App menu
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About MarkdownViewer", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About MarkdownViewer", action: #selector(showAbout(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Quit MarkdownViewer", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appMenuItem.submenu = appMenu
@@ -122,6 +122,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc private func openDocument(_ sender: Any?) {
         windowController.showOpenPanel()
+    }
+
+    @objc private func showAbout(_ sender: Any?) {
+        let credits = NSAttributedString(string: """
+            Software Bill of Materials
+
+            cmark-gfm 0.7.1
+            CommonMark parser with GitHub Flavored Markdown extensions
+            https://github.com/apple/swift-cmark
+            License: BSD-2-Clause
+
+            Mermaid 11.14.0
+            Diagram and flowchart rendering engine
+            https://github.com/mermaid-js/mermaid
+            License: MIT
+            """,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 11),
+                .foregroundColor: NSColor.secondaryLabelColor,
+            ]
+        )
+
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .credits: credits,
+        ])
     }
 
     @objc private func toggleSidebar(_ sender: Any?) {

@@ -26,12 +26,14 @@
 		808935790E16894E5923575A /* MarkdownViewerKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 689893FBFD5C135EC51AF3C2 /* MarkdownViewerKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9083F63D316E0496C752F73B /* SidebarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC533573D476B323BEE2801 /* SidebarViewController.swift */; };
 		93D3C1341B68DEE1588D498B /* ViewerWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45C0421FA4B51069DF7EE285 /* ViewerWindowController.swift */; };
+		9E7B47267FD755462ECD31AF /* mermaid.txt in Resources */ = {isa = PBXBuildFile; fileRef = A38539163E4DF3D3ECB74697 /* mermaid.txt */; };
 		A51091D80445F3B739920EE0 /* MarkdownRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF5D9FAF62237B0B2E239274 /* MarkdownRenderer.swift */; };
 		A9B4D6C1950CC79CA1BCD433 /* mermaid.min.js in Resources */ = {isa = PBXBuildFile; fileRef = 5B10C8898505C87E5DC052D1 /* mermaid.min.js */; };
 		B9F7C161BB3AB934D5C1CEC1 /* style.css in Resources */ = {isa = PBXBuildFile; fileRef = 89D825275698071222326B78 /* style.css */; };
 		BBDF60B3959AB10B28FCEEDD /* DiagramProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DCAE8E79487E6C07DF85975 /* DiagramProcessor.swift */; };
 		CA96B41D4C7AF4B23E7437AD /* TOCViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E4C0E0990E784D44F3661CB /* TOCViewController.swift */; };
 		CB777C0C91EBEACB50EC2EED /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 234D33278E0616DCC450FA28 /* AppDelegate.swift */; };
+		CED7765E58BB17DEBCEF5B0C /* cmark-gfm.txt in Resources */ = {isa = PBXBuildFile; fileRef = EC0BCB19B2710FC798EA947B /* cmark-gfm.txt */; };
 		E37E0F1B20ECD8F0FFF221BE /* MainSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5CAEE89422C08892F636BD5 /* MainSplitViewController.swift */; };
 		E806463701934124C3588A3C /* ViewerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C985260250692CE4CB76C598 /* ViewerWindow.swift */; };
 		E9909F1CC65763F8C5C9EBA6 /* MarkdownRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F5C5EE3423FB080FDD7FFE /* MarkdownRendererTests.swift */; };
@@ -97,6 +99,7 @@
 		7DCAE8E79487E6C07DF85975 /* DiagramProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagramProcessor.swift; sourceTree = "<group>"; };
 		80A50D150B6978E4CCBBE2FB /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		89D825275698071222326B78 /* style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = style.css; sourceTree = "<group>"; };
+		A38539163E4DF3D3ECB74697 /* mermaid.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = mermaid.txt; sourceTree = "<group>"; };
 		A80F29BC0D22E26EB9ED7BAA /* PlantUMLRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantUMLRenderer.swift; sourceTree = "<group>"; };
 		A9A85B4E553ED6329F81C703 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AAC533573D476B323BEE2801 /* SidebarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarViewController.swift; sourceTree = "<group>"; };
@@ -110,6 +113,7 @@
 		E3AFCF36438A5E4839E10234 /* MarkdownViewerKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MarkdownViewerKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E7BE6CCC36CB2B40FD78B497 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		EBE75FC5525F066678739FBD /* MermaidRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MermaidRenderer.swift; sourceTree = "<group>"; };
+		EC0BCB19B2710FC798EA947B /* cmark-gfm.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "cmark-gfm.txt"; sourceTree = "<group>"; };
 		F4DF9A85B4773732655B594F /* HeadingExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadingExtractorTests.swift; sourceTree = "<group>"; };
 		F4F5C5EE3423FB080FDD7FFE /* MarkdownRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownRendererTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -179,12 +183,22 @@
 			);
 			sourceTree = "<group>";
 		};
+		3BFBA929CE6D3FEB6AC6D194 /* Licenses */ = {
+			isa = PBXGroup;
+			children = (
+				EC0BCB19B2710FC798EA947B /* cmark-gfm.txt */,
+				A38539163E4DF3D3ECB74697 /* mermaid.txt */,
+			);
+			path = Licenses;
+			sourceTree = "<group>";
+		};
 		560373F7C6D2D57E549DA005 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 				5B10C8898505C87E5DC052D1 /* mermaid.min.js */,
 				89D825275698071222326B78 /* style.css */,
 				ACFB8E847ADCB207A22AE3DD /* template.html */,
+				3BFBA929CE6D3FEB6AC6D194 /* Licenses */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -353,7 +367,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CED7765E58BB17DEBCEF5B0C /* cmark-gfm.txt in Resources */,
 				A9B4D6C1950CC79CA1BCD433 /* mermaid.min.js in Resources */,
+				9E7B47267FD755462ECD31AF /* mermaid.txt in Resources */,
 				B9F7C161BB3AB934D5C1CEC1 /* style.css in Resources */,
 				2B6F31CC184DE825DEF99523 /* template.html in Resources */,
 			);
