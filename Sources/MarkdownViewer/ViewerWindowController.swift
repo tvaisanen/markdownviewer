@@ -16,7 +16,9 @@ final class ViewerWindowController: NSWindowController {
     private var tocButton: NSButton!
     private let renderer = MarkdownRenderer()
     private var templateHTML: String = ""
-    private let splitViewController = MainSplitViewController()
+    let splitViewController = MainSplitViewController()
+    var isSidebarPinned = false
+    private var sidebarHoverView: SidebarHoverZone?
 
     init() {
         let window = ViewerWindow()
@@ -53,6 +55,18 @@ final class ViewerWindowController: NSWindowController {
         splitViewController.sidebarViewController.delegate = self
         splitViewController.tocViewController.delegate = self
         loadTemplate()
+
+        // Add hover zone on left edge for auto-show sidebar
+        let hoverZone = SidebarHoverZone(windowController: self)
+        hoverZone.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(hoverZone)
+        NSLayoutConstraint.activate([
+            hoverZone.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            hoverZone.topAnchor.constraint(equalTo: containerView.topAnchor),
+            hoverZone.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            hoverZone.widthAnchor.constraint(equalToConstant: 5),
+        ])
+        sidebarHoverView = hoverZone
 
         window.restoreAndTrackFrame()
     }
@@ -137,9 +151,11 @@ final class ViewerWindowController: NSWindowController {
 
     @objc private func showFilesMode(_ sender: Any?) {
         if splitViewController.currentMode == .files && !isSidebarCollapsed {
+            isSidebarPinned = false
             collapseSidebar()
         } else {
             splitViewController.switchSidebar(to: .files)
+            isSidebarPinned = true
             expandSidebar()
         }
         updateButtonStates()
@@ -147,9 +163,11 @@ final class ViewerWindowController: NSWindowController {
 
     @objc private func showTOCMode(_ sender: Any?) {
         if splitViewController.currentMode == .toc && !isSidebarCollapsed {
+            isSidebarPinned = false
             collapseSidebar()
         } else {
             splitViewController.switchSidebar(to: .toc)
+            isSidebarPinned = true
             expandSidebar()
             updateTOC()
         }
@@ -158,8 +176,10 @@ final class ViewerWindowController: NSWindowController {
 
     func toggleSidebar() {
         if isSidebarCollapsed {
+            isSidebarPinned = true
             expandSidebar()
         } else {
+            isSidebarPinned = false
             collapseSidebar()
         }
         updateButtonStates()
@@ -183,6 +203,18 @@ final class ViewerWindowController: NSWindowController {
             context.allowsImplicitAnimation = true
             splitViewController.splitViewItems.first?.animator().isCollapsed = false
         }
+    }
+
+    func sidebarHoverEntered() {
+        guard isSidebarCollapsed && !isSidebarPinned else { return }
+        expandSidebar()
+        updateButtonStates()
+    }
+
+    func sidebarHoverExited() {
+        guard !isSidebarCollapsed && !isSidebarPinned else { return }
+        collapseSidebar()
+        updateButtonStates()
     }
 
     private func updateTOC() {
@@ -365,5 +397,92 @@ extension ViewerWindowController: SidebarDelegate {
 
     func sidebarDidRequestOpenFile() {
         showOpenPanel()
+    }
+}
+
+// MARK: - Sidebar Hover Zone
+
+/// Invisible view on the left edge that triggers sidebar auto-show on hover.
+/// Also monitors mouse movement to auto-hide when leaving the sidebar area.
+final class SidebarHoverZone: NSView {
+
+    private weak var windowController: ViewerWindowController?
+    private var edgeTrackingArea: NSTrackingArea?
+    private var monitor: Any?
+
+    init(windowController: ViewerWindowController) {
+        self.windowController = windowController
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) not supported")
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let existing = edgeTrackingArea {
+            removeTrackingArea(existing)
+        }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeInKeyWindow],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        edgeTrackingArea = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        windowController?.sidebarHoverEntered()
+        startMonitoringMouseExit()
+    }
+
+    private func startMonitoringMouseExit() {
+        stopMonitoring()
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+            self?.checkMousePosition(event)
+            return event
+        }
+    }
+
+    func stopMonitoring() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        monitor = nil
+    }
+
+    private func checkMousePosition(_ event: NSEvent) {
+        guard let wc = windowController,
+              let window = wc.window,
+              let contentView = window.contentView,
+              !wc.isSidebarPinned else {
+            stopMonitoring()
+            return
+        }
+
+        let sidebarItem = wc.splitViewController.splitViewItems.first
+        guard let sidebarView = sidebarItem?.viewController.view,
+              !(sidebarItem?.isCollapsed ?? true) else {
+            stopMonitoring()
+            return
+        }
+
+        let mouseInWindow = event.locationInWindow
+        let mouseInContent = contentView.convert(mouseInWindow, from: nil)
+        let sidebarFrame = sidebarView.convert(sidebarView.bounds, to: contentView)
+
+        // Add some padding so it doesn't flicker
+        let hitRect = sidebarFrame.insetBy(dx: -10, dy: -10)
+        if !hitRect.contains(mouseInContent) {
+            stopMonitoring()
+            wc.sidebarHoverExited()
+        }
+    }
+
+    deinit {
+        stopMonitoring()
     }
 }
