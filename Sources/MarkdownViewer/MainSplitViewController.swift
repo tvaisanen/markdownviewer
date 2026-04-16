@@ -16,11 +16,10 @@ final class MainSplitViewController: NSSplitViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebarViewController)
+        let sidebarItem = NSSplitViewItem(viewController: sidebarViewController)
         sidebarItem.canCollapse = true
         sidebarItem.minimumThickness = 180
         sidebarItem.maximumThickness = 300
-        sidebarItem.collapseBehavior = .preferResizingSiblingsWithFixedSplitView
 
         let contentItem = NSSplitViewItem(viewController: contentViewController)
         contentItem.minimumThickness = 400
@@ -40,11 +39,10 @@ final class MainSplitViewController: NSSplitViewController {
 
         removeSplitViewItem(sidebarItem)
 
-        let newSidebarItem = NSSplitViewItem(sidebarWithViewController: newController)
+        let newSidebarItem = NSSplitViewItem(viewController: newController)
         newSidebarItem.canCollapse = true
         newSidebarItem.minimumThickness = 180
         newSidebarItem.maximumThickness = 300
-        newSidebarItem.collapseBehavior = .preferResizingSiblingsWithFixedSplitView
 
         insertSplitViewItem(newSidebarItem, at: 0)
     }

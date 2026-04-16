@@ -78,8 +78,6 @@ final class ViewerWindowController: NSWindowController {
             target: self,
             action: #selector(showFilesMode(_:))
         )
-        filesButton.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.08).cgColor
-        filesButton.contentTintColor = .labelColor
 
         tocButton = Self.makeToggleButton(
             symbolName: "sidebar.leading",
@@ -158,6 +156,15 @@ final class ViewerWindowController: NSWindowController {
         updateButtonStates()
     }
 
+    func toggleSidebar() {
+        if isSidebarCollapsed {
+            expandSidebar()
+        } else {
+            collapseSidebar()
+        }
+        updateButtonStates()
+    }
+
     private var isSidebarCollapsed: Bool {
         splitViewController.splitViewItems.first?.isCollapsed ?? true
     }
@@ -199,6 +206,37 @@ final class ViewerWindowController: NSWindowController {
         templateHTML = html
     }
 
+    // MARK: - Recent Files
+
+    private static let recentFilesKey = "RecentFiles"
+    private static let maxRecentFilesKey = "MaxRecentFiles"
+
+    private var maxRecentFiles: Int {
+        let val = UserDefaults.standard.integer(forKey: Self.maxRecentFilesKey)
+        return val > 0 ? val : 10
+    }
+
+    private func addToRecent(url: URL) {
+        var recents = UserDefaults.standard.stringArray(forKey: Self.recentFilesKey) ?? []
+        let path = url.path
+        recents.removeAll { $0 == path }
+        recents.insert(path, at: 0)
+        if recents.count > maxRecentFiles {
+            recents = Array(recents.prefix(maxRecentFiles))
+        }
+        UserDefaults.standard.set(recents, forKey: Self.recentFilesKey)
+    }
+
+    func restoreRecentFiles() {
+        guard let recents = UserDefaults.standard.stringArray(forKey: Self.recentFilesKey) else { return }
+        for path in recents.reversed() {
+            let url = URL(fileURLWithPath: path)
+            if FileManager.default.fileExists(atPath: path) {
+                openFile(url: url)
+            }
+        }
+    }
+
     // MARK: - File Management
 
     func openFile(url: URL) {
@@ -219,6 +257,7 @@ final class ViewerWindowController: NSWindowController {
         watcher.watch(path: url.path)
 
         openFiles.append(OpenFile(url: url, watcher: watcher))
+        addToRecent(url: url)
         refreshSidebar()
         selectFile(at: fileIndex)
     }
@@ -287,8 +326,8 @@ final class ViewerWindowController: NSWindowController {
         splitViewController.sidebarViewController.updateFiles(items)
     }
 
-    func updateMermaidTheme(isDark: Bool) {
-        splitViewController.contentViewController.webContentView.setMermaidTheme(isDark ? "dark" : "default")
+    func applyMermaidTheme(_ theme: String) {
+        splitViewController.contentViewController.webContentView.setMermaidTheme(theme)
     }
 
     func showOpenPanel() {
