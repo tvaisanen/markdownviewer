@@ -60,6 +60,7 @@ public final class PDFExporter {
         if options.startNewPageAtH1 {
             await applyH1PageBreaks(in: webView, pageHeight: pageSize.height)
         }
+        await applyHeadingOrphanGuard(in: webView, pageHeight: pageSize.height)
         await applyBreakInsideAvoidPadding(in: webView, pageHeight: pageSize.height)
 
         let scaledPages = await detectScaledImages(in: webView, pageHeight: pageSize.height)
@@ -188,6 +189,39 @@ public final class PDFExporter {
         }
     }
 
+    /// Emulate `break-after: avoid` on headings: if a heading lands within
+    /// `orphanThreshold` points of the bottom of its page, push it to the
+    /// start of the next page so the first paragraph under it stays on the
+    /// same page.
+    private func applyHeadingOrphanGuard(in webView: WKWebView, pageHeight: CGFloat) async {
+        let js = """
+        (function() {
+            var pageH = \(pageHeight);
+            // Require ~4 body lines of content under the heading on the same page.
+            var orphanThreshold = Math.min(140, pageH * 0.18);
+            var headings = Array.from(document.querySelectorAll('h1, h2, h3'));
+            headings.forEach(function(h) {
+                if (h.getAttribute('data-pdf-orphan-padded') === '1') return;
+                var rect = h.getBoundingClientRect();
+                var absTop = rect.top + window.scrollY;
+                var absBottom = absTop + rect.height;
+                var pageIndex = Math.floor(absTop / pageH);
+                var pageBottom = (pageIndex + 1) * pageH;
+                var spaceAfter = pageBottom - absBottom;
+                if (spaceAfter < orphanThreshold && spaceAfter >= 0) {
+                    var push = spaceAfter + 1; // +1 to cross the boundary
+                    var currentMargin = parseFloat(window.getComputedStyle(h).marginTop) || 0;
+                    h.style.marginTop = (currentMargin + push) + 'px';
+                    h.setAttribute('data-pdf-orphan-padded', '1');
+                }
+            });
+        })();
+        """
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            webView.evaluateJavaScript(js) { _, _ in c.resume() }
+        }
+    }
+
     /// Uses `margin-top` rather than `padding-top` so the injected space does
     /// not accumulate with the H1 padding from `applyH1PageBreaks`, and so
     /// element backgrounds (e.g., image frames, table borders) stay tight
@@ -259,10 +293,14 @@ public final class PDFExporter {
 
     private func makeOffscreenWebView(pageSize: CGSize) -> WKWebView {
         let config = WKWebViewConfiguration()
-        return WKWebView(
+        let webView = WKWebView(
             frame: CGRect(origin: .zero, size: pageSize),
             configuration: config
         )
+        // Force light appearance so `@media (prefers-color-scheme: dark)` rules
+        // in the active theme don't fire. PDFs are always printed on white paper.
+        webView.appearance = NSAppearance(named: .aqua)
+        return webView
     }
 
     private func loadHTML(html: String, baseURL: URL?, in webView: WKWebView) async throws {
