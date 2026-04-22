@@ -21,10 +21,17 @@ build-release:
     codesign --verify --deep --strict "{{build_dir}}/Release/MarkdownViewer.app"
     @echo "Release build complete and signed."
 
-# Run debug build
-run: build
+# Run debug build, optionally opening one or more files
+run *files: build
+    #!/usr/bin/env bash
+    set -euo pipefail
     killall MarkdownViewer 2>/dev/null || true
-    open "{{build_dir}}/Debug/MarkdownViewer.app"
+    APP="$(pwd)/{{build_dir}}/Debug/MarkdownViewer.app"
+    if [ -z "{{files}}" ]; then
+        open "$APP"
+    else
+        open -a "$APP" {{files}}
+    fi
 
 # Package release zip
 package: build-release
