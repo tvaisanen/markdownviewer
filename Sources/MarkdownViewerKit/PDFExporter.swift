@@ -50,7 +50,13 @@ public final class PDFExporter {
         )
 
         let pageSize = options.paperSize.pointSize(orientation: options.orientation)
-        let webView = makeOffscreenWebView(pageSize: pageSize)
+        // Reserve vertical whitespace at the top and bottom of each printed page.
+        // We slice the webview content at `sliceHeight` and later expand each
+        // slice's mediaBox to full `pageSize`, centering the content vertically.
+        let verticalMargin: CGFloat = 54 // 0.75 in
+        let sliceHeight = max(pageSize.height - 2 * verticalMargin, pageSize.height * 0.5)
+        let sliceSize = CGSize(width: pageSize.width, height: sliceHeight)
+        let webView = makeOffscreenWebView(pageSize: sliceSize)
 
         let baseURL = bundle.resourceURL
         try await loadHTML(html: html, baseURL: baseURL, in: webView)
@@ -58,13 +64,18 @@ public final class PDFExporter {
         _ = await DiagramRenderCoordinator.waitForDiagrams(in: webView)
 
         if options.startNewPageAtH1 {
-            await applyH1PageBreaks(in: webView, pageHeight: pageSize.height)
+            await applyH1PageBreaks(in: webView, pageHeight: sliceHeight)
         }
-        await applyHeadingOrphanGuard(in: webView, pageHeight: pageSize.height)
-        await applyBreakInsideAvoidPadding(in: webView, pageHeight: pageSize.height)
+        await applyHeadingOrphanGuard(in: webView, pageHeight: sliceHeight)
+        await applyBreakInsideAvoidPadding(in: webView, pageHeight: sliceHeight)
 
-        let scaledPages = await detectScaledImages(in: webView, pageHeight: pageSize.height)
-        let data = try await createPDF(from: webView, pageSize: pageSize)
+        let scaledPages = await detectScaledImages(in: webView, pageHeight: sliceHeight)
+        let data = try await createPDF(
+            from: webView,
+            pageSize: pageSize,
+            sliceHeight: sliceHeight,
+            verticalMargin: verticalMargin
+        )
         return PDFExportResult(data: data, scaledPageIndexes: scaledPages)
     }
 
@@ -314,31 +325,40 @@ public final class PDFExporter {
         webView.navigationDelegate = nil
     }
 
-    private func createPDF(from webView: WKWebView, pageSize: CGSize) async throws -> Data {
-        // Measure content height via JavaScript, then slice the content into page-sized
-        // rects and stitch them into a single PDFDocument.
-        // Note: this approach uses pixel-slicing and does NOT honour CSS break-before/break-after.
-        // CSS print-media page breaks (e.g. body.pdf-start-h1-new-page h1) cannot be applied
-        // with this method — they require NSPrintOperation attached to a visible window.
+    private func createPDF(
+        from webView: WKWebView,
+        pageSize: CGSize,
+        sliceHeight: CGFloat,
+        verticalMargin: CGFloat
+    ) async throws -> Data {
+        // Measure content height via JavaScript, then slice the content into
+        // `sliceHeight`-tall rects and stitch them into a single PDFDocument.
+        // Each captured slice page is then wrapped in a media box of full
+        // `pageSize`, vertically centered via a mediaBox offset so the slice
+        // appears with `verticalMargin` of whitespace on top and bottom.
+        //
+        // Note: CSS print-media break rules are NOT honoured — JS-based padding
+        // in `applyHeadingOrphanGuard` / `applyBreakInsideAvoidPadding` emulates
+        // the most important ones.
         let rawHeight = await withCheckedContinuation { (c: CheckedContinuation<CGFloat, Never>) in
             webView.evaluateJavaScript("document.documentElement.scrollHeight") { result, _ in
                 if let num = result as? NSNumber {
                     c.resume(returning: CGFloat(truncating: num))
                 } else {
-                    c.resume(returning: pageSize.height)
+                    c.resume(returning: sliceHeight)
                 }
             }
         }
         guard rawHeight > 0 else {
             throw PDFExportError.emptyContent
         }
-        let totalHeight = max(rawHeight, pageSize.height)
-        let pageCount = Int(ceil(totalHeight / pageSize.height))
+        let totalHeight = max(rawHeight, sliceHeight)
+        let pageCount = Int(ceil(totalHeight / sliceHeight))
 
         let combined = PDFDocument()
         for pageIndex in 0..<pageCount {
-            let y = CGFloat(pageIndex) * pageSize.height
-            let rect = CGRect(x: 0, y: y, width: pageSize.width, height: pageSize.height)
+            let y = CGFloat(pageIndex) * sliceHeight
+            let rect = CGRect(x: 0, y: y, width: pageSize.width, height: sliceHeight)
             let config = WKPDFConfiguration()
             config.rect = rect
             let data: Data = try await withCheckedThrowingContinuation { c in
@@ -349,9 +369,19 @@ public final class PDFExporter {
                     }
                 }
             }
-            if let page = PDFDocument(data: data)?.page(at: 0) {
-                combined.insert(page, at: combined.pageCount)
-            }
+            guard let page = PDFDocument(data: data)?.page(at: 0) else { continue }
+            // Expand the page's mediaBox to the full paper size. The captured
+            // content lives at (0, 0, pageSize.width, sliceHeight) in PDF user
+            // space; shifting the mediaBox origin down by `verticalMargin`
+            // leaves that band of whitespace above and below the content.
+            let newMediaBox = CGRect(
+                x: 0,
+                y: -verticalMargin,
+                width: pageSize.width,
+                height: pageSize.height
+            )
+            page.setBounds(newMediaBox, for: .mediaBox)
+            combined.insert(page, at: combined.pageCount)
         }
 
         return combined.dataRepresentation() ?? Data()
