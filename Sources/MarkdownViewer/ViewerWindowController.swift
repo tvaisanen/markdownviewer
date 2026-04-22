@@ -12,6 +12,13 @@ final class ViewerWindowController: NSWindowController {
 
     private var openFiles: [OpenFile] = []
     private var selectedIndex: Int = -1
+
+    /// URL of the currently selected file, if any. Exposed for PDF preview integration.
+    var currentFileURL: URL? {
+        guard selectedIndex >= 0 && selectedIndex < openFiles.count else { return nil }
+        return openFiles[selectedIndex].url
+    }
+
     private var filesButton: NSButton!
     private var tocButton: NSButton!
     private let renderer = MarkdownRenderer()

@@ -82,6 +82,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let fileMenu = NSMenu(title: "File")
         fileMenu.addItem(withTitle: "Open...", action: #selector(openDocument(_:)), keyEquivalent: "o")
         fileMenu.addItem(withTitle: "Close File", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        // TODO(Task 13): Remove this dev item when ⌘P wiring lands.
+        let previewItem = NSMenuItem(
+            title: "PDF Preview… (dev)",
+            action: #selector(showPDFPreview(_:)),
+            keyEquivalent: ""
+        )
+        fileMenu.addItem(previewItem)
         fileMenuItem.submenu = fileMenu
         mainMenu.addItem(fileMenuItem)
 
@@ -138,6 +145,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc private func openDocument(_ sender: Any?) {
         windowController.showOpenPanel()
+    }
+
+    // MARK: - PDF Preview (dev — removed in Task 13 when ⌘P wiring lands)
+
+    private var previewController: PDFPreviewWindowController?
+
+    @objc func showPDFPreview(_ sender: Any?) {
+        guard let url = currentPreviewURL() else {
+            NSSound.beep()
+            return
+        }
+        let controller = PDFPreviewWindowController(sourceURL: url)
+        controller.showWindow(self)
+        previewController = controller
+    }
+
+    /// Source URL for the dev preview — uses the key window's active file if available.
+    private func currentPreviewURL() -> URL? {
+        guard let wc = NSApp.keyWindow?.windowController as? ViewerWindowController else {
+            return nil
+        }
+        return wc.currentFileURL
     }
 
     @objc private func showAbout(_ sender: Any?) {
