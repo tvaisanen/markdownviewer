@@ -35,8 +35,17 @@ targets:
     platform: macOS
     sources:
       - Sources/MarkdownViewer
-      - path: Resources
-        type: group
+      - path: Resources/template.html
+        buildPhase: resources
+      - path: Resources/mermaid.min.js
+        buildPhase: resources
+      - path: Resources/pdf-overlay.css
+        buildPhase: resources
+      - path: Resources/themes
+        type: folder
+        buildPhase: resources
+      - path: Resources/Licenses
+        type: folder
         buildPhase: resources
     dependencies:
       - target: MarkdownViewerKit
@@ -78,8 +87,14 @@ targets:
       - path: Tests/MarkdownViewerKitTests/Fixtures
         type: folder
         buildPhase: resources
-      - path: Resources
-        type: group
+      - path: Resources/template.html
+        buildPhase: resources
+      - path: Resources/mermaid.min.js
+        buildPhase: resources
+      - path: Resources/pdf-overlay.css
+        buildPhase: resources
+      - path: Resources/themes
+        type: folder
         buildPhase: resources
     dependencies:
       - target: MarkdownViewerKit
