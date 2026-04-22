@@ -40,6 +40,20 @@ xcodegen generate
 just build
 ```
 
+## Export as PDF
+
+MarkdownViewer exports any document as a presentable, WYSIWYG PDF:
+
+- **⌘P** — Print…
+- **⌘⇧P** — Export as PDF…
+
+Both open a live preview window. Pick one of three document themes
+(GitHub, Technical Paper, Apple Documentation), paper size (Letter or A4),
+orientation, and optional running header/footer. The preview updates
+in real time as you edit the source markdown. Images, diagrams, and
+short code blocks are never split across pages; very long code blocks
+fall back to splitting.
+
 ## License
 
 MIT
