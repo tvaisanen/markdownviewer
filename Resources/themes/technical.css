@@ -1,0 +1,95 @@
+:root {
+    --text-color: #111111;
+    --bg-color: #ffffff;
+    --code-bg: #f4f1ea;
+    --border-color: #d6d3cc;
+    --link-color: #b1361e;
+    --blockquote-color: #555555;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text-color: #e8e4da;
+        --bg-color: #1c1a17;
+        --code-bg: #2a2622;
+        --border-color: #3a342d;
+        --link-color: #e0845f;
+        --blockquote-color: #a8a298;
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: "Charter", "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 48px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: "Charter", "Iowan Old Style", Palatino, Georgia, serif;
+    font-weight: 700;
+    margin-top: 1.6em;
+    margin-bottom: 0.5em;
+    line-height: 1.2;
+}
+
+h1 { font-size: 2.2em; }
+h2 { font-size: 1.6em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.2em; }
+h3 { font-size: 1.3em; }
+
+p, li { hyphens: auto; }
+
+a { color: var(--link-color); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+    font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background-color: var(--code-bg);
+    padding: 0.15em 0.35em;
+    border-radius: 3px;
+}
+
+pre {
+    background-color: var(--code-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 14px;
+    overflow-x: auto;
+    line-height: 1.45;
+    font-size: 0.88em;
+}
+
+pre code { background: none; padding: 0; }
+
+blockquote {
+    color: var(--blockquote-color);
+    border-left: 3px solid var(--border-color);
+    padding: 0 1em;
+    margin: 1em 0;
+    font-style: italic;
+}
+
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.95em; }
+th, td { border: 1px solid var(--border-color); padding: 6px 10px; text-align: left; }
+th { background-color: var(--code-bg); font-weight: 700; }
+
+img { max-width: 100%; height: auto; }
+hr { border: none; border-top: 1px solid var(--border-color); margin: 2em 0; }
+
+.mermaid { text-align: center; margin: 1em 0; }
+.plantuml-error, .plantuml-placeholder {
+    background-color: var(--code-bg);
+    border: 1px dashed var(--border-color);
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    color: var(--blockquote-color);
+    margin: 1em 0;
+}
