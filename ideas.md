@@ -1,1 +1,0 @@
-- mermaid dont reload on file saved

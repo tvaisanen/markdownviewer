@@ -13,3 +13,7 @@ build/
 .build/
 .swiftpm/
 Packages/
+
+# Emacs lock files
+.#*
+ideas.md
