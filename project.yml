@@ -79,6 +79,7 @@ targets:
       - target: MarkdownViewerKit
     settings:
       SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
   mdview:
     type: tool
     platform: macOS
