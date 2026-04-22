@@ -1,4 +1,5 @@
 import Cocoa
+import MarkdownViewerKit
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
@@ -81,6 +82,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let fileMenu = NSMenu(title: "File")
         fileMenu.addItem(withTitle: "Open...", action: #selector(openDocument(_:)), keyEquivalent: "o")
         fileMenu.addItem(withTitle: "Close File", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        fileMenu.addItem(.separator())
+
+        let printItem = NSMenuItem(
+            title: "Print…",
+            action: #selector(printDocument(_:)),
+            keyEquivalent: "p"
+        )
+        printItem.keyEquivalentModifierMask = [.command]
+        fileMenu.addItem(printItem)
+
+        let exportItem = NSMenuItem(
+            title: "Export as PDF…",
+            action: #selector(exportAsPDF(_:)),
+            keyEquivalent: "p"
+        )
+        exportItem.keyEquivalentModifierMask = [.command, .shift]
+        fileMenu.addItem(exportItem)
+
         fileMenuItem.submenu = fileMenu
         mainMenu.addItem(fileMenuItem)
 
@@ -105,6 +124,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         mermaidMenuItem.submenu = mermaidMenu
         viewMenu.addItem(mermaidMenuItem)
 
+        let themeMenu = NSMenu(title: "Theme")
+        for theme in PDFTheme.allCases {
+            let item = NSMenuItem(
+                title: theme.displayName,
+                action: #selector(selectTheme(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            item.representedObject = theme.rawValue
+            themeMenu.addItem(item)
+        }
+        let themeContainer = NSMenuItem(title: "Theme", action: nil, keyEquivalent: "")
+        themeContainer.submenu = themeMenu
+        viewMenu.addItem(themeContainer)
+
         viewMenuItem.submenu = viewMenu
         mainMenu.addItem(viewMenuItem)
 
@@ -122,6 +156,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc private func openDocument(_ sender: Any?) {
         windowController.showOpenPanel()
+    }
+
+    // MARK: - PDF Print / Export
+
+    @objc func printDocument(_ sender: Any?) {
+        activeViewerWindowController()?.openPDFPreview(primingAction: .print)
+    }
+
+    @objc func exportAsPDF(_ sender: Any?) {
+        activeViewerWindowController()?.openPDFPreview(primingAction: .export)
+    }
+
+    private func activeViewerWindowController() -> ViewerWindowController? {
+        NSApp.keyWindow?.windowController as? ViewerWindowController
     }
 
     @objc private func showAbout(_ sender: Any?) {
@@ -153,6 +201,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         windowController.toggleSidebar()
     }
 
+    // MARK: - PDF Theme
+
+    @objc func selectTheme(_ sender: NSMenuItem) {
+        guard
+            let raw = sender.representedObject as? String,
+            let theme = PDFTheme(rawValue: raw)
+        else { return }
+        ThemeManager.shared.current = theme
+    }
+
     // MARK: - Mermaid Theme
 
     @objc private func selectMermaidTheme(_ sender: NSMenuItem) {
@@ -180,6 +238,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if menuItem.action == #selector(selectMermaidTheme(_:)),
            let theme = menuItem.representedObject as? String {
             menuItem.state = (theme == selectedMermaidTheme) ? .on : .off
+        }
+        if menuItem.action == #selector(selectTheme(_:)),
+           let raw = menuItem.representedObject as? String {
+            menuItem.state = (raw == ThemeManager.shared.current.rawValue) ? .on : .off
         }
         return true
     }

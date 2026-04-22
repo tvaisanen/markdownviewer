@@ -12,6 +12,7 @@ final class ViewerWindowController: NSWindowController {
 
     private var openFiles: [OpenFile] = []
     private var selectedIndex: Int = -1
+
     private var filesButton: NSButton!
     private var tocButton: NSButton!
     private let renderer = MarkdownRenderer()
@@ -56,6 +57,16 @@ final class ViewerWindowController: NSWindowController {
         splitViewController.tocViewController.delegate = self
         loadTemplate()
         splitViewController.contentViewController.webContentView.setBrightness(savedBrightness)
+
+        NotificationCenter.default.addObserver(
+            forName: ThemeManager.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.renderSelectedFile()
+            }
+        }
 
         // Add hover zone on left edge for auto-show sidebar
         let hoverZone = SidebarHoverZone(windowController: self)
@@ -372,7 +383,12 @@ final class ViewerWindowController: NSWindowController {
         guard selectedIndex >= 0 && selectedIndex < openFiles.count else { return }
         let url = openFiles[selectedIndex].url
         guard let markdown = try? String(contentsOf: url, encoding: .utf8) else { return }
-        let html = renderer.renderFull(markdown: markdown, templateHTML: templateHTML)
+        let themeHref = "themes/\(ThemeManager.shared.current.stylesheetFilename)"
+        let html = renderer.renderFull(
+            markdown: markdown,
+            templateHTML: templateHTML,
+            extraStylesheetHrefs: [themeHref]
+        )
         let resourcesURL = Bundle.main.resourceURL
         let contentVC = splitViewController.contentViewController
         contentVC.showContent()
@@ -400,6 +416,28 @@ final class ViewerWindowController: NSWindowController {
 
     func applyMermaidTheme(_ theme: String) {
         splitViewController.contentViewController.webContentView.setMermaidTheme(theme)
+    }
+
+    // MARK: - PDF Preview
+
+    enum PDFPrimingAction { case print, export }
+
+    private var pdfPreviewController: PDFPreviewWindowController?
+
+    func openPDFPreview(primingAction: PDFPrimingAction) {
+        guard selectedIndex >= 0, selectedIndex < openFiles.count else {
+            NSSound.beep()
+            return
+        }
+        let url = openFiles[selectedIndex].url
+        let controller = pdfPreviewController ?? PDFPreviewWindowController(sourceURL: url)
+        pdfPreviewController = controller
+        controller.showWindow(self)
+        controller.window?.makeKeyAndOrderFront(nil)
+        switch primingAction {
+        case .print:  controller.focusPrintButton()
+        case .export: controller.focusExportButton()
+        }
     }
 
     func showOpenPanel() {

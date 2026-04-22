@@ -35,8 +35,17 @@ targets:
     platform: macOS
     sources:
       - Sources/MarkdownViewer
-      - path: Resources
-        type: group
+      - path: Resources/template.html
+        buildPhase: resources
+      - path: Resources/mermaid.min.js
+        buildPhase: resources
+      - path: Resources/pdf-overlay.css
+        buildPhase: resources
+      - path: Resources/themes
+        type: folder
+        buildPhase: resources
+      - path: Resources/Licenses
+        type: folder
         buildPhase: resources
     dependencies:
       - target: MarkdownViewerKit
@@ -75,10 +84,23 @@ targets:
     platform: macOS
     sources:
       - Tests/MarkdownViewerKitTests
+      - path: Tests/MarkdownViewerKitTests/Fixtures
+        type: folder
+        buildPhase: resources
+      - path: Resources/template.html
+        buildPhase: resources
+      - path: Resources/mermaid.min.js
+        buildPhase: resources
+      - path: Resources/pdf-overlay.css
+        buildPhase: resources
+      - path: Resources/themes
+        type: folder
+        buildPhase: resources
     dependencies:
       - target: MarkdownViewerKit
     settings:
       SWIFT_VERSION: "6.0"
+      GENERATE_INFOPLIST_FILE: YES
   mdview:
     type: tool
     platform: macOS
@@ -86,3 +108,11 @@ targets:
       - Sources/mdview
     settings:
       SWIFT_VERSION: "6.0"
+schemes:
+  MarkdownViewerKitTests:
+    build:
+      targets:
+        MarkdownViewerKitTests: [test]
+    test:
+      targets:
+        - MarkdownViewerKitTests

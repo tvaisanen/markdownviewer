@@ -43,4 +43,21 @@ final class MarkdownRendererTests: XCTestCase {
         XCTAssertTrue(html.contains("<html>"))
         XCTAssertTrue(html.contains("<h1>"))
     }
+
+    func testRenderFullAppliesTheme() {
+        let template = """
+        <html><head>{{EXTRA_HEAD}}</head><body{{BODY_ATTRS}}>{{CONTENT}}</body></html>
+        """
+        let renderer = MarkdownRenderer()
+        let html = renderer.renderFull(
+            markdown: "# Hi",
+            templateHTML: template,
+            extraStylesheetHrefs: ["themes/technical.css", "pdf-overlay.css"],
+            bodyClasses: ["pdf-start-h1-new-page"]
+        )
+        XCTAssertTrue(html.contains("themes/technical.css"))
+        XCTAssertTrue(html.contains("pdf-overlay.css"))
+        XCTAssertTrue(html.contains("<body class=\"pdf-start-h1-new-page\">"))
+        XCTAssertTrue(html.contains("<h1>Hi</h1>"))
+    }
 }
