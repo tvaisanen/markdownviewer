@@ -11,6 +11,7 @@ final class PDFPreviewWindowController: NSWindowController {
     private let thumbnailView = PDFThumbnailView()
     private let exporter = PDFExporter()
     private var generationTask: Task<Void, Never>?
+    private let fileWatcher = FileWatcher()
 
     private let themePopup = NSPopUpButton()
     private let paperPopup = NSPopUpButton()
@@ -40,9 +41,18 @@ final class PDFPreviewWindowController: NSWindowController {
         seedPaperSizeFromLocale()
         setupLayout()
         regenerate()
+
+        fileWatcher.onChange = { [weak self] in
+            Task { @MainActor in self?.regenerate() }
+        }
+        fileWatcher.watch(path: sourceURL.path)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) not supported") }
+
+    deinit {
+        fileWatcher.stop()
+    }
 
     // MARK: - Layout
 
