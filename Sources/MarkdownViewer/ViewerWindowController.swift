@@ -57,6 +57,16 @@ final class ViewerWindowController: NSWindowController {
         loadTemplate()
         splitViewController.contentViewController.webContentView.setBrightness(savedBrightness)
 
+        NotificationCenter.default.addObserver(
+            forName: ThemeManager.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.renderSelectedFile()
+            }
+        }
+
         // Add hover zone on left edge for auto-show sidebar
         let hoverZone = SidebarHoverZone(windowController: self)
         hoverZone.translatesAutoresizingMaskIntoConstraints = false
@@ -372,10 +382,11 @@ final class ViewerWindowController: NSWindowController {
         guard selectedIndex >= 0 && selectedIndex < openFiles.count else { return }
         let url = openFiles[selectedIndex].url
         guard let markdown = try? String(contentsOf: url, encoding: .utf8) else { return }
+        let themeHref = "themes/\(ThemeManager.shared.current.stylesheetFilename)"
         let html = renderer.renderFull(
             markdown: markdown,
             templateHTML: templateHTML,
-            extraStylesheetHrefs: ["themes/github.css"]
+            extraStylesheetHrefs: [themeHref]
         )
         let resourcesURL = Bundle.main.resourceURL
         let contentVC = splitViewController.contentViewController
