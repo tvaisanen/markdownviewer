@@ -8,36 +8,28 @@ build:
     xcodebuild -scheme MarkdownViewer -configuration Debug -derivedDataPath build build
     xcodebuild -scheme mdview -configuration Debug -derivedDataPath build build
 
-# Build signed release.
-#
-# Signing strategy: build UNSIGNED, then do a single deep `codesign` pass at
-# the end. A single codesign invocation with --deep descends all nested
-# bundles and frameworks and signs them with the given identity in one
-# keychain access, so the user is prompted at most once for key access
-# instead of three or more times during xcodebuild's per-target signing.
+# Build signed release (run `just trust-signing-key` once to avoid password prompts)
 build-release:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Build unsigned, then one deep codesign pass on the .app and one on the CLI.
     rm -rf build
     xcodegen generate
-    @# Build everything unsigned. `CODE_SIGNING_ALLOWED=NO` suppresses the
-    @# build-system's own signing passes.
     xcodebuild -scheme MarkdownViewer -configuration Release -derivedDataPath build \
         CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
     xcodebuild -scheme mdview -configuration Release -derivedDataPath build \
         CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
-    @# Verify both products exist
-    @test -d "{{build_dir}}/Release/MarkdownViewer.app" || (echo "ERROR: MarkdownViewer.app not found" && exit 1)
-    @test -f "{{build_dir}}/Release/mdview" || (echo "ERROR: mdview binary not found" && exit 1)
-    @# One deep signing pass over the entire bundle → one keychain prompt.
-    @# --options runtime enables the Hardened Runtime, required for notarization.
+    test -d "{{build_dir}}/Release/MarkdownViewer.app" || { echo "ERROR: MarkdownViewer.app not found"; exit 1; }
+    test -f "{{build_dir}}/Release/mdview" || { echo "ERROR: mdview binary not found"; exit 1; }
+    # Deep sign the app (descends into embedded frameworks). --options runtime
+    # enables the Hardened Runtime, required for notarization.
     codesign --force --deep --timestamp --options runtime \
         --sign "{{sign_identity}}" "{{build_dir}}/Release/MarkdownViewer.app"
-    @# Sign the CLI binary separately; it's not a nested bundle.
     codesign --force --timestamp --options runtime \
         --sign "{{sign_identity}}" "{{build_dir}}/Release/mdview"
-    @# Verify
     codesign --verify --deep --strict "{{build_dir}}/Release/MarkdownViewer.app"
     codesign --verify --strict "{{build_dir}}/Release/mdview"
-    @echo "Release build complete and signed."
+    echo "Release build complete and signed."
 
 # Run debug build, optionally opening one or more files
 run *files: build
@@ -60,23 +52,31 @@ package: build-release
     @echo "Packaged: {{build_dir}}/Release/MarkdownViewer.zip"
     @shasum -a 256 "{{build_dir}}/Release/MarkdownViewer.zip"
 
-# Create GitHub release and update homebrew tap
+# Create GitHub release and update homebrew tap (uses one bash shell)
 release version: package
-    @# Ensure working tree is clean
-    @test -z "$(git status --porcelain)" || (echo "ERROR: uncommitted changes" && exit 1)
-    @# Push source
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Ensure working tree is clean
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "ERROR: uncommitted changes"
+        exit 1
+    fi
+
+    # Push source
     git push origin main
-    @# Delete old release if exists
+
+    # Delete old release (idempotent for re-runs after a mid-failure)
     gh release delete "v{{version}}" --repo tvaisanen/markdownviewer --yes --cleanup-tag 2>/dev/null || true
-    @# Create release
+
+    # Create release
     gh release create "v{{version}}" \
         "{{build_dir}}/Release/MarkdownViewer.zip" \
         "{{build_dir}}/Release/mdview" \
         --target main \
         --title "v{{version}}"
-    @# Update homebrew tap
-    #!/usr/bin/env bash
-    set -euo pipefail
+
+    # Update homebrew tap
     SHA=$(shasum -a 256 "{{build_dir}}/Release/MarkdownViewer.zip" | cut -d' ' -f1)
     cd "{{tap_repo}}"
     sed -i '' "s/version \".*\"/version \"{{version}}\"/" Casks/mdview.rb
@@ -84,7 +84,19 @@ release version: package
     git add -A
     git commit -m "Update mdview to v{{version}}"
     git push origin main
-    @echo "Released v{{version}} — run: brew update && brew reinstall --cask mdview"
+
+    echo "Released v{{version}} — run: brew update && brew reinstall --cask mdview"
+
+# Grant codesign unprompted access to the signing key (run once; asks for keychain password)
+trust-signing-key:
+    @echo "This will update the ACL on your Developer ID signing key so codesign"
+    @echo "can use it without prompting. You will be asked for your login keychain"
+    @echo "password ONCE."
+    @echo ""
+    security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+        ~/Library/Keychains/login.keychain-db
+    @echo ""
+    @echo "Done. Future releases should no longer prompt per codesign invocation."
 
 # Verify installed app matches latest release
 verify:
