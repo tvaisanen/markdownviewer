@@ -66,6 +66,7 @@ public final class PDFExporter {
         if options.startNewPageAtH1 {
             await applyH1PageBreaks(in: webView, pageHeight: sliceHeight)
         }
+        await applyOversizedSectionScaling(in: webView, pageHeight: sliceHeight)
         await applyPaginationRules(in: webView, pageHeight: sliceHeight)
         await applyTitlePageCentering(in: webView, pageHeight: sliceHeight)
 
@@ -199,6 +200,80 @@ public final class PDFExporter {
                     var current = parseFloat(window.getComputedStyle(h1).paddingTop) || 0;
                     h1.style.paddingTop = (current + extra) + 'px';
                 }
+            });
+        })();
+        """
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            webView.evaluateJavaScript(js) { _, _ in c.resume() }
+        }
+    }
+
+    /// Scale down figures in sections that would overflow a single page so
+    /// the whole section (heading + its content) fits on one page. Uses the
+    /// `zoom` CSS property, which (unlike `transform: scale`) shrinks both
+    /// visual rendering and the layout footprint. A lower bound of 0.5
+    /// avoids unreadable output; anything smaller than that is left to
+    /// straddle or split.
+    private func applyOversizedSectionScaling(in webView: WKWebView, pageHeight: CGFloat) async {
+        let js = """
+        (function() {
+            var pageH = \(pageHeight);
+            var headingSelector = 'h1, h2, h3';
+            var keepWholeSelector = 'img, svg, figure, .mermaid, .plantuml-placeholder, .plantuml-error, table';
+            var minScale = 0.5;
+            // Section fits if <= 96% of page height (leave some breathing room).
+            var fitTargetRatio = 0.96;
+
+            // Build sections (heading + siblings up to next heading).
+            var sections = [];
+            var children = Array.from(document.body.children);
+            var current = null;
+            children.forEach(function(child) {
+                if (child.matches(headingSelector)) {
+                    if (current) sections.push(current);
+                    current = { heading: child, members: [] };
+                } else if (current) {
+                    current.members.push(child);
+                }
+            });
+            if (current) sections.push(current);
+
+            sections.forEach(function(section) {
+                if (section.members.length === 0) return;
+
+                // Find the figures owned by this section (top-level matches only,
+                // skip nested — e.g. the inner <svg> of a <.mermaid>).
+                var figures = [];
+                section.members.forEach(function(m) {
+                    var candidates = m.matches(keepWholeSelector)
+                        ? [m]
+                        : Array.from(m.querySelectorAll(keepWholeSelector));
+                    candidates.forEach(function(c) {
+                        if (c.closest(keepWholeSelector) === c && figures.indexOf(c) === -1) {
+                            figures.push(c);
+                        }
+                    });
+                });
+                if (figures.length === 0) return;
+
+                // Measure the section's visual extent.
+                var firstTop = section.heading.getBoundingClientRect().top;
+                var lastBottom = section.members[section.members.length - 1]
+                    .getBoundingClientRect().bottom;
+                var sectionHeight = lastBottom - firstTop;
+                if (sectionHeight <= pageH * fitTargetRatio) return;
+
+                var scale = (pageH * fitTargetRatio) / sectionHeight;
+                if (scale >= 1) return;
+                if (scale < minScale) scale = minScale;
+
+                // Zoom every figure in the section proportionally. If there
+                // are multiple figures, each shrinks; combined section height
+                // drops close to page height.
+                figures.forEach(function(fig) {
+                    var existingZoom = parseFloat(fig.style.zoom) || 1;
+                    fig.style.zoom = (existingZoom * scale).toString();
+                });
             });
         })();
         """
