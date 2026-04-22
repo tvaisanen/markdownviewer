@@ -372,7 +372,11 @@ final class ViewerWindowController: NSWindowController {
         guard selectedIndex >= 0 && selectedIndex < openFiles.count else { return }
         let url = openFiles[selectedIndex].url
         guard let markdown = try? String(contentsOf: url, encoding: .utf8) else { return }
-        let html = renderer.renderFull(markdown: markdown, templateHTML: templateHTML)
+        let html = renderer.renderFull(
+            markdown: markdown,
+            templateHTML: templateHTML,
+            extraStylesheetHrefs: ["themes/github.css"]
+        )
         let resourcesURL = Bundle.main.resourceURL
         let contentVC = splitViewController.contentViewController
         contentVC.showContent()

@@ -37,7 +37,36 @@ public final class MarkdownRenderer: Sendable {
     /// The template must contain `{{CONTENT}}` as the placeholder.
     public func renderFull(markdown: String, templateHTML: String) -> String {
         let body = renderBody(markdown: markdown)
-        return templateHTML.replacingOccurrences(of: "{{CONTENT}}", with: body)
+        return templateHTML
+            .replacingOccurrences(of: "{{EXTRA_HEAD}}", with: "")
+            .replacingOccurrences(of: "{{BODY_ATTRS}}", with: "")
+            .replacingOccurrences(of: "{{CONTENT}}", with: body)
+    }
+
+    /// Renders full HTML with optional extra stylesheets injected into the head
+    /// and optional CSS classes applied to `<body>`.
+    ///
+    /// Template placeholders: `{{EXTRA_HEAD}}`, `{{BODY_ATTRS}}`, `{{CONTENT}}`.
+    public func renderFull(
+        markdown: String,
+        templateHTML: String,
+        extraStylesheetHrefs: [String],
+        bodyClasses: [String] = []
+    ) -> String {
+        let body = renderBody(markdown: markdown)
+
+        let linkTags = extraStylesheetHrefs
+            .map { "<link rel=\"stylesheet\" href=\"\($0)\">" }
+            .joined(separator: "\n    ")
+
+        let bodyAttrs: String = bodyClasses.isEmpty
+            ? ""
+            : " class=\"\(bodyClasses.joined(separator: " "))\""
+
+        return templateHTML
+            .replacingOccurrences(of: "{{EXTRA_HEAD}}", with: linkTags)
+            .replacingOccurrences(of: "{{BODY_ATTRS}}", with: bodyAttrs)
+            .replacingOccurrences(of: "{{CONTENT}}", with: body)
     }
 
     private func cmarkToHTML(_ markdown: String) -> String {
