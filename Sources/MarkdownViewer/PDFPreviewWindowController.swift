@@ -169,8 +169,7 @@ final class PDFPreviewWindowController: NSWindowController {
         footerCheckbox.target = self
         footerCheckbox.action = #selector(footerChanged(_:))
 
-        headerField.stringValue = currentOptions.headerText
-            ?? sourceURL.deletingPathExtension().lastPathComponent
+        headerField.stringValue = currentOptions.headerText ?? ""
         headerField.target = self
         headerField.action = #selector(headerTextChanged(_:))
         headerField.placeholderString = "Header text"

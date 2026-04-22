@@ -567,7 +567,7 @@ public final class PDFExporter {
         else { return pdfData }
 
         let pageCount = srcPDF.numberOfPages
-        let headerText = options.headerText ?? documentTitle
+        let headerText = options.headerText ?? ""
         let outData = NSMutableData()
         guard let consumer = CGDataConsumer(data: outData) else { return pdfData }
         var mediaBox = CGRect(origin: .zero, size: pageSize)
