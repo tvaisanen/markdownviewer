@@ -67,13 +67,21 @@ public final class PDFExporter {
             await applyH1PageBreaks(in: webView, pageHeight: sliceHeight)
         }
         await applyPaginationRules(in: webView, pageHeight: sliceHeight)
+        await applyTitlePageCentering(in: webView, pageHeight: sliceHeight)
 
         let scaledPages = await detectScaledImages(in: webView, pageHeight: sliceHeight)
-        let data = try await createPDF(
+        let rawData = try await createPDF(
             from: webView,
             pageSize: pageSize,
             sliceHeight: sliceHeight,
             verticalMargin: verticalMargin
+        )
+        let data = stampPageChrome(
+            pdfData: rawData,
+            pageSize: pageSize,
+            verticalMargin: verticalMargin,
+            options: options,
+            documentTitle: documentTitle
         )
         return PDFExportResult(data: data, scaledPageIndexes: scaledPages)
     }
@@ -192,6 +200,51 @@ public final class PDFExporter {
                     h1.style.paddingTop = (current + extra) + 'px';
                 }
             });
+        })();
+        """
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            webView.evaluateJavaScript(js) { _, _ in c.resume() }
+        }
+    }
+
+    /// If the first `<h1>` is alone on page 1 (all subsequent content got
+    /// pushed to page 2+ by pagination), center it vertically using a CSS
+    /// `transform: translateY`. Transforms don't affect layout flow, so
+    /// subsequent pages stay put.
+    private func applyTitlePageCentering(in webView: WKWebView, pageHeight: CGFloat) async {
+        let js = """
+        (function() {
+            var pageH = \(pageHeight);
+            var first = document.body.firstElementChild;
+            if (!first || first.tagName !== 'H1') return;
+            var firstRect = first.getBoundingClientRect();
+            var firstTop = firstRect.top + window.scrollY;
+            var firstBottom = firstTop + firstRect.height;
+            var firstPage = Math.floor(firstTop / pageH);
+            // Must be on page 0 (top page of document)
+            if (firstPage !== 0) return;
+            var next = first.nextElementSibling;
+            if (!next) return;
+            var nextTop = next.getBoundingClientRect().top + window.scrollY;
+            if (Math.floor(nextTop / pageH) <= firstPage) return; // not alone
+            // Center the H1 vertically in the slice (page 0 runs y=0 to y=pageH).
+            var h1Height = firstRect.height;
+            var targetTop = (pageH - h1Height) / 2;
+            var shift = targetTop - firstTop;
+            if (shift <= 0) return;
+            first.style.transform = 'translateY(' + shift + 'px)';
+            // Add a thin rule below the title, also translated, for a subtle
+            // "title page" feel. Only insert if one isn't already there.
+            if (!document.querySelector('.pdf-title-rule')) {
+                var rule = document.createElement('div');
+                rule.className = 'pdf-title-rule';
+                rule.style.width = '120px';
+                rule.style.height = '2px';
+                rule.style.background = '#888';
+                rule.style.margin = '16px 0 0 0';
+                rule.style.transform = 'translateY(' + shift + 'px)';
+                first.parentNode.insertBefore(rule, first.nextSibling);
+            }
         })();
         """
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
@@ -418,6 +471,124 @@ public final class PDFExporter {
         }
 
         return combined.dataRepresentation() ?? Data()
+    }
+
+    /// Draw running header/footer text (title, page numbers) onto each page
+    /// using a fresh CGPDF context — the CSS `@top-right`/`@bottom-center`
+    /// rules from `makePageCSS` never render under pixel-slicing.
+    ///
+    /// Returns new PDF data; the input data is discarded.
+    private func stampPageChrome(
+        pdfData: Data,
+        pageSize: CGSize,
+        verticalMargin: CGFloat,
+        options: PDFExportOptions,
+        documentTitle: String
+    ) -> Data {
+        guard options.showHeader || options.showFooter else { return pdfData }
+        guard let srcProvider = CGDataProvider(data: pdfData as CFData),
+              let srcPDF = CGPDFDocument(srcProvider),
+              srcPDF.numberOfPages > 0
+        else { return pdfData }
+
+        let pageCount = srcPDF.numberOfPages
+        let headerText = options.headerText ?? documentTitle
+        let outData = NSMutableData()
+        guard let consumer = CGDataConsumer(data: outData) else { return pdfData }
+        var mediaBox = CGRect(origin: .zero, size: pageSize)
+        guard let ctx = CGContext(consumer: consumer, mediaBox: &mediaBox, nil)
+        else { return pdfData }
+
+        let chromeFont = NSFont.systemFont(ofSize: 9, weight: .regular)
+        let chromeColor = NSColor(calibratedWhite: 0.45, alpha: 1.0)
+        let chromeAttributes: [NSAttributedString.Key: Any] = [
+            .font: chromeFont,
+            .foregroundColor: chromeColor,
+        ]
+
+        for pageIndex in 1...pageCount {
+            guard let srcPage = srcPDF.page(at: pageIndex) else { continue }
+            let srcMediaBox = srcPage.getBoxRect(.mediaBox)
+            var box = mediaBox
+            ctx.beginPage(mediaBox: &box)
+
+            // Redraw the original page into the new page's coordinate system.
+            // Shift down so the original page appears at our expected (0, 0, pageSize).
+            ctx.saveGState()
+            ctx.translateBy(x: -srcMediaBox.origin.x, y: -srcMediaBox.origin.y)
+            ctx.drawPDFPage(srcPage)
+            ctx.restoreGState()
+
+            // Draw chrome in the margin bands. Skip header on the first page
+            // when it's a title page, and never print page 1's number (looks
+            // cleaner — standard book convention).
+            let isTitlePage = pageIndex == 1
+            if options.showHeader, !isTitlePage, !headerText.isEmpty {
+                drawChromeText(
+                    headerText,
+                    attributes: chromeAttributes,
+                    pageSize: pageSize,
+                    verticalMargin: verticalMargin,
+                    position: .header,
+                    context: ctx
+                )
+            }
+            if options.showFooter, !isTitlePage {
+                drawChromeText(
+                    "\(pageIndex)",
+                    attributes: chromeAttributes,
+                    pageSize: pageSize,
+                    verticalMargin: verticalMargin,
+                    position: .footer,
+                    context: ctx
+                )
+            }
+
+            ctx.endPage()
+        }
+
+        ctx.closePDF()
+        return outData as Data
+    }
+
+    private enum ChromePosition { case header, footer }
+
+    private func drawChromeText(
+        _ text: String,
+        attributes: [NSAttributedString.Key: Any],
+        pageSize: CGSize,
+        verticalMargin: CGFloat,
+        position: ChromePosition,
+        context: CGContext
+    ) {
+        let attributed = NSAttributedString(string: text, attributes: attributes)
+        let line = CTLineCreateWithAttributedString(attributed)
+        let lineBounds = CTLineGetImageBounds(line, context)
+
+        // Horizontal: centered for footer, right-aligned for header.
+        let horizontalPadding: CGFloat = 54
+        let x: CGFloat
+        switch position {
+        case .header:
+            x = pageSize.width - horizontalPadding - lineBounds.width
+        case .footer:
+            x = (pageSize.width - lineBounds.width) / 2
+        }
+
+        // Vertical: header sits in top margin band, footer in bottom band.
+        let baselineOffset: CGFloat = 12
+        let y: CGFloat
+        switch position {
+        case .header:
+            y = pageSize.height - verticalMargin + baselineOffset
+        case .footer:
+            y = verticalMargin - baselineOffset - lineBounds.height
+        }
+
+        context.saveGState()
+        context.textPosition = CGPoint(x: x, y: y)
+        CTLineDraw(line, context)
+        context.restoreGState()
     }
 }
 
