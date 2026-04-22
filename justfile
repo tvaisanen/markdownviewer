@@ -27,6 +27,9 @@ run *files: build
     set -euo pipefail
     killall MarkdownViewer 2>/dev/null || true
     APP="$(pwd)/{{build_dir}}/Debug/MarkdownViewer.app"
+    # Register the fresh bundle so LaunchServices resolves -a <path> reliably.
+    LSREG=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+    "$LSREG" -f "$APP" >/dev/null 2>&1 || true
     if [ -z "{{files}}" ]; then
         open "$APP"
     else
