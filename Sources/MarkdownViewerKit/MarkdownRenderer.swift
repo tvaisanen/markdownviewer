@@ -34,7 +34,10 @@ public final class MarkdownRenderer: Sendable {
     }
 
     /// Renders markdown into a full HTML document using the given template.
-    /// The template must contain `{{CONTENT}}` as the placeholder.
+    ///
+    /// The template must contain `{{CONTENT}}`. If it also contains `{{EXTRA_HEAD}}`
+    /// or `{{BODY_ATTRS}}`, those placeholders are replaced with empty strings.
+    /// For theme or body-class injection, use the 4-argument overload.
     public func renderFull(markdown: String, templateHTML: String) -> String {
         let body = renderBody(markdown: markdown)
         return templateHTML
@@ -47,12 +50,27 @@ public final class MarkdownRenderer: Sendable {
     /// and optional CSS classes applied to `<body>`.
     ///
     /// Template placeholders: `{{EXTRA_HEAD}}`, `{{BODY_ATTRS}}`, `{{CONTENT}}`.
+    ///
+    /// - Important: Values in `extraStylesheetHrefs` and `bodyClasses` are
+    ///   interpolated verbatim into HTML attributes with no escaping. Callers
+    ///   must supply only trusted, well-formed values (e.g., known stylesheet
+    ///   filenames). Passing values containing `"` or `<` will corrupt the
+    ///   document and in hostile cases could enable injection.
     public func renderFull(
         markdown: String,
         templateHTML: String,
         extraStylesheetHrefs: [String],
         bodyClasses: [String] = []
     ) -> String {
+        // Cheap structural guards — callers must not pass values that break
+        // out of the HTML attribute quotes.
+        for href in extraStylesheetHrefs {
+            precondition(!href.contains("\""), "stylesheet href contains a quote: \(href)")
+        }
+        for cls in bodyClasses {
+            precondition(!cls.contains("\""), "body class contains a quote: \(cls)")
+        }
+
         let body = renderBody(markdown: markdown)
 
         let linkTags = extraStylesheetHrefs
