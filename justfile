@@ -8,17 +8,35 @@ build:
     xcodebuild -scheme MarkdownViewer -configuration Debug -derivedDataPath build build
     xcodebuild -scheme mdview -configuration Debug -derivedDataPath build build
 
-# Build signed release
+# Build signed release.
+#
+# Signing strategy: build UNSIGNED, then do a single deep `codesign` pass at
+# the end. A single codesign invocation with --deep descends all nested
+# bundles and frameworks and signs them with the given identity in one
+# keychain access, so the user is prompted at most once for key access
+# instead of three or more times during xcodebuild's per-target signing.
 build-release:
     rm -rf build
     xcodegen generate
-    xcodebuild -scheme MarkdownViewer -configuration Release -derivedDataPath build CODE_SIGN_IDENTITY="{{sign_identity}}" build
-    xcodebuild -scheme mdview -configuration Release -derivedDataPath build build
+    @# Build everything unsigned. `CODE_SIGNING_ALLOWED=NO` suppresses the
+    @# build-system's own signing passes.
+    xcodebuild -scheme MarkdownViewer -configuration Release -derivedDataPath build \
+        CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+    xcodebuild -scheme mdview -configuration Release -derivedDataPath build \
+        CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
     @# Verify both products exist
     @test -d "{{build_dir}}/Release/MarkdownViewer.app" || (echo "ERROR: MarkdownViewer.app not found" && exit 1)
     @test -f "{{build_dir}}/Release/mdview" || (echo "ERROR: mdview binary not found" && exit 1)
-    @# Verify signing
+    @# One deep signing pass over the entire bundle → one keychain prompt.
+    @# --options runtime enables the Hardened Runtime, required for notarization.
+    codesign --force --deep --timestamp --options runtime \
+        --sign "{{sign_identity}}" "{{build_dir}}/Release/MarkdownViewer.app"
+    @# Sign the CLI binary separately; it's not a nested bundle.
+    codesign --force --timestamp --options runtime \
+        --sign "{{sign_identity}}" "{{build_dir}}/Release/mdview"
+    @# Verify
     codesign --verify --deep --strict "{{build_dir}}/Release/MarkdownViewer.app"
+    codesign --verify --strict "{{build_dir}}/Release/mdview"
     @echo "Release build complete and signed."
 
 # Run debug build, optionally opening one or more files
