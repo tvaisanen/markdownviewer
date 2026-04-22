@@ -5,6 +5,7 @@ import PDFKit
 public enum PDFExportError: Error {
     case templateUnavailable
     case createPDFFailed(Error)
+    case emptyContent
 }
 
 @MainActor
@@ -105,6 +106,8 @@ public final class PDFExporter {
          .replacingOccurrences(of: "\"", with: "\\\"")
     }
 
+    /// Uses `padding-top` so the heading's own background/underline (if any)
+    /// extends into the injected space.
     /// For each H1 (except the very first), add a `padding-top` so that it falls exactly
     /// at the start of the next page slice. This ensures the pixel-slicing `createPDF`
     /// produces a fresh page for each top-level heading.
@@ -112,7 +115,7 @@ public final class PDFExporter {
         let js = """
         (function() {
             var pageH = \(pageHeight);
-            var h1s = Array.from(document.querySelectorAll('body > h1, article > h1, main > h1, div > h1, h1'));
+            var h1s = Array.from(document.querySelectorAll('h1'));
             var seen = false;
             h1s.forEach(function(h1) {
                 if (!seen) { seen = true; return; } // skip first H1
@@ -135,6 +138,10 @@ public final class PDFExporter {
         }
     }
 
+    /// Uses `margin-top` rather than `padding-top` so the injected space does
+    /// not accumulate with the H1 padding from `applyH1PageBreaks`, and so
+    /// element backgrounds (e.g., image frames, table borders) stay tight
+    /// against the element instead of extending through the gap.
     /// Emulate `break-inside: avoid` for images, figures, diagrams, tables, and rows
     /// by injecting `margin-top` so elements that would straddle a pixel-slice boundary
     /// start on the next page instead. Elements taller than a page are left alone
@@ -189,9 +196,10 @@ public final class PDFExporter {
                 return paddedAny;
             }
 
-            // Two passes — subsequent elements shift after the first round of padding.
-            padStraddlers();
-            padStraddlers();
+            // Bounded cascade: each padding round shifts later elements; keep
+            // iterating until no new straddlers remain or we hit the cap.
+            var iterations = 0;
+            while (padStraddlers() && iterations < 10) { iterations++; }
         })();
         """
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
@@ -214,6 +222,7 @@ public final class PDFExporter {
             delegate.onFinish = { continuation.resume() }
             webView.loadHTMLString(html, baseURL: baseURL)
         }
+        _ = delegate              // retain until navigation completes
         webView.navigationDelegate = nil
     }
 
@@ -231,6 +240,9 @@ public final class PDFExporter {
                     c.resume(returning: pageSize.height)
                 }
             }
+        }
+        guard rawHeight > 0 else {
+            throw PDFExportError.emptyContent
         }
         let totalHeight = max(rawHeight, pageSize.height)
         let pageCount = Int(ceil(totalHeight / pageSize.height))
