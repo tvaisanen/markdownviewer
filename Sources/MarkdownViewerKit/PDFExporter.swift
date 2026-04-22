@@ -66,8 +66,7 @@ public final class PDFExporter {
         if options.startNewPageAtH1 {
             await applyH1PageBreaks(in: webView, pageHeight: sliceHeight)
         }
-        await applyHeadingOrphanGuard(in: webView, pageHeight: sliceHeight)
-        await applyBreakInsideAvoidPadding(in: webView, pageHeight: sliceHeight)
+        await applyPaginationRules(in: webView, pageHeight: sliceHeight)
 
         let scaledPages = await detectScaledImages(in: webView, pageHeight: sliceHeight)
         let data = try await createPDF(
@@ -200,101 +199,135 @@ public final class PDFExporter {
         }
     }
 
-    /// Emulate `break-after: avoid` on headings: if a heading lands within
-    /// `orphanThreshold` points of the bottom of its page, push it to the
-    /// start of the next page so the first paragraph under it stays on the
-    /// same page.
-    private func applyHeadingOrphanGuard(in webView: WKWebView, pageHeight: CGFloat) async {
+    /// Group-aware pagination: emulate `break-after: avoid` (keep heading with
+    /// its following content) and `break-inside: avoid` (don't split figures,
+    /// diagrams, or tables) in a single pass that pushes whole sections
+    /// rather than isolated elements.
+    ///
+    /// A "section" is a heading (h1/h2/h3) plus every sibling that follows
+    /// until the next heading. If any figure/diagram/table inside the section
+    /// would straddle a page boundary, OR if the heading lands near the
+    /// bottom of its page, we push the *heading* so the whole section moves
+    /// to the next page. This keeps heading + content travelling together.
+    private func applyPaginationRules(in webView: WKWebView, pageHeight: CGFloat) async {
         let js = """
         (function() {
             var pageH = \(pageHeight);
-            // Require ~4 body lines of content under the heading on the same page.
-            var orphanThreshold = Math.min(140, pageH * 0.18);
-            var headings = Array.from(document.querySelectorAll('h1, h2, h3'));
-            headings.forEach(function(h) {
-                if (h.getAttribute('data-pdf-orphan-padded') === '1') return;
-                var rect = h.getBoundingClientRect();
-                var absTop = rect.top + window.scrollY;
-                var absBottom = absTop + rect.height;
-                var pageIndex = Math.floor(absTop / pageH);
-                var pageBottom = (pageIndex + 1) * pageH;
-                var spaceAfter = pageBottom - absBottom;
-                if (spaceAfter < orphanThreshold && spaceAfter >= 0) {
-                    var push = spaceAfter + 1; // +1 to cross the boundary
-                    var currentMargin = parseFloat(window.getComputedStyle(h).marginTop) || 0;
-                    h.style.marginTop = (currentMargin + push) + 'px';
-                    h.setAttribute('data-pdf-orphan-padded', '1');
-                }
-            });
-        })();
-        """
-        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
-            webView.evaluateJavaScript(js) { _, _ in c.resume() }
-        }
-    }
+            // "Keep-whole" block types: figures, diagrams, tables — splitting
+            // these looks bad, so their section gets pushed if they'd straddle.
+            var keepWholeSelector = 'img, svg, figure, .mermaid, .plantuml-placeholder, .plantuml-error, table';
+            // Minimum content height a heading needs on its page before it's
+            // allowed to stay — ~4 body lines or 18% of the page, whichever is less.
+            var headingOrphanThreshold = Math.min(140, pageH * 0.18);
+            var headingSelector = 'h1, h2, h3';
 
-    /// Uses `margin-top` rather than `padding-top` so the injected space does
-    /// not accumulate with the H1 padding from `applyH1PageBreaks`, and so
-    /// element backgrounds (e.g., image frames, table borders) stay tight
-    /// against the element instead of extending through the gap.
-    /// Emulate `break-inside: avoid` for images, figures, diagrams, tables, and rows
-    /// by injecting `margin-top` so elements that would straddle a pixel-slice boundary
-    /// start on the next page instead. Elements taller than a page are left alone
-    /// (no amount of padding fixes them; they will span multiple pages).
-    private func applyBreakInsideAvoidPadding(in webView: WKWebView, pageHeight: CGFloat) async {
-        let js = """
-        (function() {
-            var pageH = \(pageHeight);
-            var selectors = 'img, svg, figure, .mermaid, .plantuml-placeholder, .plantuml-error, table, tr';
-            // Ancestor selectors: if an element's ancestor already appears in our list,
-            // pad the ancestor instead (avoids double-padding nested elements like
-            // an <svg> inside a <.mermaid> div, or a <tr> already handled via <table>).
-            var ancestorSelectors = 'figure, .mermaid, .plantuml-placeholder, .plantuml-error, table';
+            function topY(el) {
+                return el.getBoundingClientRect().top + window.scrollY;
+            }
 
-            function hasMatchingAncestor(el) {
-                var parent = el.parentElement;
-                while (parent) {
-                    if (parent.matches(ancestorSelectors)) return true;
-                    parent = parent.parentElement;
+            function pageOf(y) { return Math.floor(y / pageH); }
+
+            // Build sections: each heading starts one; its members are every
+            // following sibling up to the next heading (or end of body).
+            function buildSections() {
+                var sections = [];
+                var children = Array.from(document.body.children);
+                var current = null;
+                children.forEach(function(child) {
+                    if (child.matches(headingSelector)) {
+                        if (current) sections.push(current);
+                        current = { heading: child, members: [] };
+                    } else if (current) {
+                        current.members.push(child);
+                    }
+                });
+                if (current) sections.push(current);
+                return sections;
+            }
+
+            // Add `margin-top` to element `el` so its top moves to the next
+            // page boundary. Idempotent via a data attribute.
+            function pushToNextPage(el) {
+                if (el.getAttribute('data-pdf-push-applied') === '1') return false;
+                var top = topY(el);
+                var page = pageOf(top);
+                var offset = top - page * pageH;
+                if (offset <= 1) return false; // already near top
+                var push = pageH - offset;
+                var current = parseFloat(window.getComputedStyle(el).marginTop) || 0;
+                el.style.marginTop = (current + push) + 'px';
+                el.setAttribute('data-pdf-push-applied', '1');
+                return true;
+            }
+
+            // Return true if any member of a section is a "keep-whole" element
+            // that currently straddles a page boundary (and is small enough
+            // to fit on a single page — otherwise no amount of padding helps).
+            function sectionHasStraddlingFigure(section) {
+                for (var i = 0; i < section.members.length; i++) {
+                    var m = section.members[i];
+                    var figures = m.matches(keepWholeSelector)
+                        ? [m]
+                        : Array.from(m.querySelectorAll(keepWholeSelector));
+                    for (var j = 0; j < figures.length; j++) {
+                        var fig = figures[j];
+                        var rect = fig.getBoundingClientRect();
+                        var h = rect.height;
+                        if (h <= 0 || h >= pageH) continue;
+                        var absTop = rect.top + window.scrollY;
+                        var absBottom = absTop + h;
+                        if (pageOf(absTop) !== pageOf(absBottom - 1)) return true;
+                    }
                 }
                 return false;
             }
 
-            function padStraddlers() {
-                var els = Array.from(document.querySelectorAll(selectors));
-                // Snapshot rects before any writes to avoid reflow mid-loop.
-                var items = els.map(function(el) {
-                    return { el: el, rect: el.getBoundingClientRect() };
-                });
-                var paddedAny = false;
-                items.forEach(function(item) {
-                    var el = item.el;
-                    if (el.getAttribute('data-pdf-padded') === '1') return;
-                    // Skip elements whose ancestor is already in our selector list —
-                    // padding the ancestor will move the child automatically.
-                    if (hasMatchingAncestor(el)) return;
-                    var rect = item.rect;
-                    var h = rect.height;
-                    if (h <= 0 || h >= pageH) return; // zero / oversized — skip
-                    var absTop = rect.top + window.scrollY;
-                    var topPage = Math.floor(absTop / pageH);
-                    var bottomPage = Math.floor((absTop + h - 1) / pageH);
-                    if (topPage === bottomPage) return; // fits on one page already
-                    var pageTop = topPage * pageH;
-                    var offsetInPage = absTop - pageTop;
-                    var push = pageH - offsetInPage;
-                    var current = parseFloat(window.getComputedStyle(el).marginTop) || 0;
-                    el.style.marginTop = (current + push) + 'px';
-                    el.setAttribute('data-pdf-padded', '1');
-                    paddedAny = true;
-                });
-                return paddedAny;
+            // Return true if the heading is too close to the bottom of its
+            // page to have meaningful content follow.
+            function headingIsOrphaned(heading) {
+                var rect = heading.getBoundingClientRect();
+                var absTop = rect.top + window.scrollY;
+                var absBottom = absTop + rect.height;
+                var pageBottom = (pageOf(absTop) + 1) * pageH;
+                var spaceAfter = pageBottom - absBottom;
+                return spaceAfter >= 0 && spaceAfter < headingOrphanThreshold;
             }
 
-            // Bounded cascade: each padding round shifts later elements; keep
-            // iterating until no new straddlers remain or we hit the cap.
+            // One pass: walk sections in document order; if a section violates
+            // either rule, push the heading to the next page. Each push may
+            // cascade — later sections shift — so we re-run the loop until
+            // stable or we hit the cap.
+            function runOnce() {
+                var sections = buildSections();
+                var changed = false;
+                for (var i = 0; i < sections.length; i++) {
+                    var s = sections[i];
+                    var needsPush = headingIsOrphaned(s.heading)
+                        || sectionHasStraddlingFigure(s);
+                    if (needsPush) {
+                        if (pushToNextPage(s.heading)) changed = true;
+                    }
+                }
+                // Also handle section-less figures (no preceding heading),
+                // or the rare case where a figure inside a section is
+                // padded individually after its heading also moved.
+                var figures = Array.from(document.querySelectorAll(keepWholeSelector));
+                figures.forEach(function(fig) {
+                    if (fig.closest(keepWholeSelector) !== fig) return; // nested
+                    var rect = fig.getBoundingClientRect();
+                    var h = rect.height;
+                    if (h <= 0 || h >= pageH) return;
+                    var absTop = rect.top + window.scrollY;
+                    var absBottom = absTop + h;
+                    if (pageOf(absTop) === pageOf(absBottom - 1)) return;
+                    // Straddling figure not covered by a section push — pad it.
+                    if (pushToNextPage(fig)) changed = true;
+                });
+                return changed;
+            }
+
             var iterations = 0;
-            while (padStraddlers() && iterations < 10) { iterations++; }
+            while (runOnce() && iterations < 15) { iterations++; }
         })();
         """
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
