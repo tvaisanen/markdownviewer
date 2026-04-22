@@ -82,13 +82,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let fileMenu = NSMenu(title: "File")
         fileMenu.addItem(withTitle: "Open...", action: #selector(openDocument(_:)), keyEquivalent: "o")
         fileMenu.addItem(withTitle: "Close File", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
-        // TODO(Task 13): Remove this dev item when ⌘P wiring lands.
-        let previewItem = NSMenuItem(
-            title: "PDF Preview… (dev)",
-            action: #selector(showPDFPreview(_:)),
-            keyEquivalent: ""
+        fileMenu.addItem(.separator())
+
+        let printItem = NSMenuItem(
+            title: "Print…",
+            action: #selector(printDocument(_:)),
+            keyEquivalent: "p"
         )
-        fileMenu.addItem(previewItem)
+        printItem.keyEquivalentModifierMask = [.command]
+        fileMenu.addItem(printItem)
+
+        let exportItem = NSMenuItem(
+            title: "Export as PDF…",
+            action: #selector(exportAsPDF(_:)),
+            keyEquivalent: "p"
+        )
+        exportItem.keyEquivalentModifierMask = [.command, .shift]
+        fileMenu.addItem(exportItem)
+
         fileMenuItem.submenu = fileMenu
         mainMenu.addItem(fileMenuItem)
 
@@ -147,26 +158,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         windowController.showOpenPanel()
     }
 
-    // MARK: - PDF Preview (dev — removed in Task 13 when ⌘P wiring lands)
+    // MARK: - PDF Print / Export
 
-    private var previewController: PDFPreviewWindowController?
-
-    @objc func showPDFPreview(_ sender: Any?) {
-        guard let url = currentPreviewURL() else {
-            NSSound.beep()
-            return
-        }
-        let controller = PDFPreviewWindowController(sourceURL: url)
-        controller.showWindow(self)
-        previewController = controller
+    @objc func printDocument(_ sender: Any?) {
+        activeViewerWindowController()?.openPDFPreview(primingAction: .print)
     }
 
-    /// Source URL for the dev preview — uses the key window's active file if available.
-    private func currentPreviewURL() -> URL? {
-        guard let wc = NSApp.keyWindow?.windowController as? ViewerWindowController else {
-            return nil
-        }
-        return wc.currentFileURL
+    @objc func exportAsPDF(_ sender: Any?) {
+        activeViewerWindowController()?.openPDFPreview(primingAction: .export)
+    }
+
+    private func activeViewerWindowController() -> ViewerWindowController? {
+        NSApp.keyWindow?.windowController as? ViewerWindowController
     }
 
     @objc private func showAbout(_ sender: Any?) {

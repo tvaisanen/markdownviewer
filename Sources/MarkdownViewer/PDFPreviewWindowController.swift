@@ -248,6 +248,11 @@ final class PDFPreviewWindowController: NSWindowController {
         currentOptions.paperSize = (abs(sys.height - a4Height) < abs(sys.height - 792)) ? .a4 : .letter
     }
 
+    // MARK: - Focus helpers (for ⌘P / ⌘⇧P priming)
+
+    func focusPrintButton()  { window?.makeFirstResponder(printButton) }
+    func focusExportButton() { window?.makeFirstResponder(exportButton) }
+
     /// Regenerate the PDF with current options and display it.
     func regenerate() {
         generationTask?.cancel()

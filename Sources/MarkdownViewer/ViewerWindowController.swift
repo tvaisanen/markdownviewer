@@ -13,12 +13,6 @@ final class ViewerWindowController: NSWindowController {
     private var openFiles: [OpenFile] = []
     private var selectedIndex: Int = -1
 
-    /// URL of the currently selected file, if any. Exposed for PDF preview integration.
-    var currentFileURL: URL? {
-        guard selectedIndex >= 0 && selectedIndex < openFiles.count else { return nil }
-        return openFiles[selectedIndex].url
-    }
-
     private var filesButton: NSButton!
     private var tocButton: NSButton!
     private let renderer = MarkdownRenderer()
@@ -422,6 +416,28 @@ final class ViewerWindowController: NSWindowController {
 
     func applyMermaidTheme(_ theme: String) {
         splitViewController.contentViewController.webContentView.setMermaidTheme(theme)
+    }
+
+    // MARK: - PDF Preview
+
+    enum PDFPrimingAction { case print, export }
+
+    private var pdfPreviewController: PDFPreviewWindowController?
+
+    func openPDFPreview(primingAction: PDFPrimingAction) {
+        guard selectedIndex >= 0, selectedIndex < openFiles.count else {
+            NSSound.beep()
+            return
+        }
+        let url = openFiles[selectedIndex].url
+        let controller = pdfPreviewController ?? PDFPreviewWindowController(sourceURL: url)
+        pdfPreviewController = controller
+        controller.showWindow(self)
+        controller.window?.makeKeyAndOrderFront(nil)
+        switch primingAction {
+        case .print:  controller.focusPrintButton()
+        case .export: controller.focusExportButton()
+        }
     }
 
     func showOpenPanel() {
