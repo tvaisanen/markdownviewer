@@ -8,6 +8,8 @@ final class PDFExportOptionsTests: XCTestCase {
         XCTAssertEqual(opts.theme, .gitHub)
         XCTAssertEqual(opts.orientation, .portrait)
         XCTAssertFalse(opts.startNewPageAtH1)
+        XCTAssertTrue(opts.showHeader)
+        XCTAssertTrue(opts.showFooter)
     }
 
     func testPaperSizeLetterDimensionsInPoints() {

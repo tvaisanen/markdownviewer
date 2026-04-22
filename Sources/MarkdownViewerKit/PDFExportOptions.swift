@@ -29,11 +29,17 @@ public struct PDFExportOptions: Equatable, Sendable {
         }
     }
 
+    /// Document theme applied to both screen rendering and the exported PDF.
     public var theme: PDFTheme
+    /// Paper size for the exported PDF.
     public var paperSize: PaperSize
+    /// Page orientation for the exported PDF.
     public var orientation: Orientation
+    /// When true, every top-level H1 heading starts on a fresh page. Default false.
     public var startNewPageAtH1: Bool
+    /// Whether to render a running header on each page.
     public var showHeader: Bool
+    /// Whether to render a running footer (page number) on each page.
     public var showFooter: Bool
     /// Running header text; nil = use theme default behavior.
     public var headerText: String?
