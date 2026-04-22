@@ -8,6 +8,13 @@ public enum PDFExportError: Error {
     case emptyContent
 }
 
+public struct PDFExportResult: Sendable {
+    public let data: Data
+    /// Page indexes (0-based) where at least one image or diagram was rendered
+    /// at less than 70% of its natural linear size (≈49% area).
+    public let scaledPageIndexes: [Int]
+}
+
 @MainActor
 public final class PDFExporter {
 
@@ -25,7 +32,7 @@ public final class PDFExporter {
         markdown: String,
         options: PDFExportOptions,
         documentTitle: String
-    ) async throws -> Data {
+    ) async throws -> PDFExportResult {
         let templateHTML = try loadTemplate()
         let extraStylesheets = [
             "themes/\(options.theme.stylesheetFilename)",
@@ -55,10 +62,53 @@ public final class PDFExporter {
         }
         await applyBreakInsideAvoidPadding(in: webView, pageHeight: pageSize.height)
 
-        return try await createPDF(from: webView, pageSize: pageSize)
+        let scaledPages = await detectScaledImages(in: webView, pageHeight: pageSize.height)
+        let data = try await createPDF(from: webView, pageSize: pageSize)
+        return PDFExportResult(data: data, scaledPageIndexes: scaledPages)
     }
 
     // MARK: - Private
+
+    /// Returns page indexes (0-based) where images/diagrams were scaled to fit.
+    /// Uses a 49% area threshold (≈70% on each linear axis).
+    private func detectScaledImages(in webView: WKWebView, pageHeight: CGFloat) async -> [Int] {
+        let js = """
+        (function() {
+            var pages = new Set();
+            var els = document.querySelectorAll('img, svg, .mermaid');
+            els.forEach(function(el) {
+                var rect = el.getBoundingClientRect();
+                var natural = 0;
+                if (el.tagName === 'IMG') {
+                    natural = (el.naturalWidth || 0) * (el.naturalHeight || 0);
+                } else if (el.tagName === 'SVG') {
+                    var w = parseFloat(el.getAttribute('width')) || rect.width;
+                    var h = parseFloat(el.getAttribute('height')) || rect.height;
+                    natural = w * h;
+                } else {
+                    // .mermaid: use the inner SVG's intrinsic size if present
+                    var svg = el.querySelector('svg');
+                    if (svg) {
+                        var w = parseFloat(svg.getAttribute('width')) || svg.getBoundingClientRect().width;
+                        var h = parseFloat(svg.getAttribute('height')) || svg.getBoundingClientRect().height;
+                        natural = w * h;
+                    }
+                }
+                var rendered = rect.width * rect.height;
+                if (natural > 0 && rendered > 0 && (rendered / natural) < 0.49) {
+                    var pageIndex = Math.floor((rect.top + window.scrollY) / \(pageHeight));
+                    pages.add(pageIndex);
+                }
+            });
+            return Array.from(pages).sort(function(a, b) { return a - b; });
+        })();
+        """
+        return await withCheckedContinuation { (c: CheckedContinuation<[Int], Never>) in
+            webView.evaluateJavaScript(js) { result, _ in
+                c.resume(returning: (result as? [Int]) ?? [])
+            }
+        }
+    }
 
     private func loadTemplate() throws -> String {
         guard

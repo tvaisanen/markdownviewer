@@ -16,11 +16,12 @@ final class PDFExporterTests: XCTestCase {
     func testSimpleDocumentProducesOnePage() async throws {
         let markdown = try loadFixture("simple")
         let exporter = PDFExporter(bundle: Bundle(for: Self.self))
-        let data = try await exporter.exportPDF(
+        let result = try await exporter.exportPDF(
             markdown: markdown,
             options: .defaults,
             documentTitle: "simple"
         )
+        let data = result.data
         let doc = try XCTUnwrap(PDFDocument(data: data))
         XCTAssertEqual(doc.pageCount, 1)
     }
@@ -30,11 +31,12 @@ final class PDFExporterTests: XCTestCase {
         var opts = PDFExportOptions.defaults
         opts.startNewPageAtH1 = true
         let exporter = PDFExporter(bundle: Bundle(for: Self.self))
-        let data = try await exporter.exportPDF(
+        let result = try await exporter.exportPDF(
             markdown: markdown,
             options: opts,
             documentTitle: "heading-break"
         )
+        let data = result.data
         let doc = try XCTUnwrap(PDFDocument(data: data))
         XCTAssertEqual(doc.pageCount, 2)
     }
@@ -42,11 +44,12 @@ final class PDFExporterTests: XCTestCase {
     func testLongCodeBlockIsAllowedToSplit() async throws {
         let markdown = try loadFixture("long-code")
         let exporter = PDFExporter(bundle: Bundle(for: Self.self))
-        let data = try await exporter.exportPDF(
+        let result = try await exporter.exportPDF(
             markdown: markdown,
             options: .defaults,
             documentTitle: "long-code"
         )
+        let data = result.data
         let doc = try XCTUnwrap(PDFDocument(data: data))
         XCTAssertGreaterThan(doc.pageCount, 1)
     }
@@ -57,11 +60,12 @@ final class PDFExporterTests: XCTestCase {
         // `image-near-break.md` would be split across two pages.
         let markdown = try loadFixture("image-near-break")
         let exporter = PDFExporter(bundle: Bundle(for: Self.self))
-        let data = try await exporter.exportPDF(
+        let result = try await exporter.exportPDF(
             markdown: markdown,
             options: .defaults,
             documentTitle: "image-near-break"
         )
+        let data = result.data
         let doc = try XCTUnwrap(PDFDocument(data: data))
 
         // Find which page contains the substring "End" that appears inside the
@@ -93,12 +97,23 @@ final class PDFExporterTests: XCTestCase {
             var opts = PDFExportOptions.defaults
             opts.theme = theme
             let exporter = PDFExporter(bundle: Bundle(for: Self.self))
-            let data = try await exporter.exportPDF(
+            let result = try await exporter.exportPDF(
                 markdown: markdown,
                 options: opts,
                 documentTitle: "simple"
             )
-            XCTAssertGreaterThan(data.count, 0, "\(theme) produced empty PDF")
+            XCTAssertGreaterThan(result.data.count, 0, "\(theme) produced empty PDF")
         }
+    }
+
+    func testScaledPageIndexesEmptyForNormalContent() async throws {
+        let markdown = try loadFixture("simple")
+        let exporter = PDFExporter(bundle: Bundle(for: Self.self))
+        let result = try await exporter.exportPDF(
+            markdown: markdown,
+            options: .defaults,
+            documentTitle: "simple"
+        )
+        XCTAssertEqual(result.scaledPageIndexes, [])
     }
 }

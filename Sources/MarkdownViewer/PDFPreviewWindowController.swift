@@ -12,6 +12,8 @@ final class PDFPreviewWindowController: NSWindowController {
     private let exporter = PDFExporter()
     private var generationTask: Task<Void, Never>?
     private let fileWatcher = FileWatcher()
+    private var warningPageIndexes: Set<Int> = []
+    private let warningColumn = NSStackView()
 
     private let themePopup = NSPopUpButton()
     private let paperPopup = NSPopUpButton()
@@ -87,8 +89,15 @@ final class PDFPreviewWindowController: NSWindowController {
         pdfView.displayMode = .singlePageContinuous
         pdfView.backgroundColor = .windowBackgroundColor
 
+        warningColumn.orientation = .vertical
+        warningColumn.spacing = 0
+        warningColumn.alignment = .centerX
+        warningColumn.translatesAutoresizingMaskIntoConstraints = false
+        warningColumn.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+
         contentView.addSubview(toolbar)
         contentView.addSubview(thumbnailView)
+        contentView.addSubview(warningColumn)
         contentView.addSubview(pdfView)
 
         NSLayoutConstraint.activate([
@@ -101,7 +110,12 @@ final class PDFPreviewWindowController: NSWindowController {
             thumbnailView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
             thumbnailView.widthAnchor.constraint(equalToConstant: 140),
 
-            pdfView.leadingAnchor.constraint(equalTo: thumbnailView.trailingAnchor),
+            warningColumn.leadingAnchor.constraint(equalTo: thumbnailView.trailingAnchor),
+            warningColumn.topAnchor.constraint(equalTo: thumbnailView.topAnchor),
+            warningColumn.bottomAnchor.constraint(equalTo: thumbnailView.bottomAnchor),
+            warningColumn.widthAnchor.constraint(equalToConstant: 20),
+
+            pdfView.leadingAnchor.constraint(equalTo: warningColumn.trailingAnchor),
             pdfView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             pdfView.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
             pdfView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
@@ -253,6 +267,27 @@ final class PDFPreviewWindowController: NSWindowController {
     func focusPrintButton()  { window?.makeFirstResponder(printButton) }
     func focusExportButton() { window?.makeFirstResponder(exportButton) }
 
+    private func rebuildWarningColumn(pageCount: Int) {
+        warningColumn.arrangedSubviews.forEach { view in
+            warningColumn.removeArrangedSubview(view)
+            view.removeFromSuperview()
+        }
+        for i in 0..<pageCount {
+            let iv = NSImageView()
+            iv.translatesAutoresizingMaskIntoConstraints = false
+            iv.heightAnchor.constraint(equalToConstant: 138).isActive = true
+            if warningPageIndexes.contains(i) {
+                iv.image = NSImage(
+                    systemSymbolName: "exclamationmark.triangle.fill",
+                    accessibilityDescription: "Scaled content"
+                )
+                iv.contentTintColor = .systemOrange
+                iv.toolTip = "Content on this page was scaled to fit."
+            }
+            warningColumn.addArrangedSubview(iv)
+        }
+    }
+
     /// Regenerate the PDF with current options and display it.
     func regenerate() {
         generationTask?.cancel()
@@ -260,13 +295,14 @@ final class PDFPreviewWindowController: NSWindowController {
             guard let self else { return }
             do {
                 let markdown = try String(contentsOf: self.sourceURL, encoding: .utf8)
-                let data = try await self.exporter.exportPDF(
+                let result = try await self.exporter.exportPDF(
                     markdown: markdown,
                     options: self.currentOptions,
                     documentTitle: self.sourceURL.deletingPathExtension().lastPathComponent
                 )
                 if Task.isCancelled { return }
-                self.display(pdfData: data)
+                self.warningPageIndexes = Set(result.scaledPageIndexes)
+                self.display(pdfData: result.data)
             } catch {
                 NSLog("PDF generation failed: \(error)")
             }
@@ -284,5 +320,6 @@ final class PDFPreviewWindowController: NSWindowController {
         if let doc = doc, currentPageIndex < doc.pageCount, let page = doc.page(at: currentPageIndex) {
             pdfView.go(to: page)
         }
+        rebuildWarningColumn(pageCount: doc?.pageCount ?? 0)
     }
 }
