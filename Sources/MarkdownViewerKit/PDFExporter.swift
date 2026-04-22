@@ -52,6 +52,7 @@ public final class PDFExporter {
         if options.startNewPageAtH1 {
             await applyH1PageBreaks(in: webView, pageHeight: pageSize.height)
         }
+        await applyBreakInsideAvoidPadding(in: webView, pageHeight: pageSize.height)
 
         return try await createPDF(from: webView, pageSize: pageSize)
     }
@@ -127,6 +128,70 @@ public final class PDFExporter {
                     h1.style.paddingTop = (current + extra) + 'px';
                 }
             });
+        })();
+        """
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            webView.evaluateJavaScript(js) { _, _ in c.resume() }
+        }
+    }
+
+    /// Emulate `break-inside: avoid` for images, figures, diagrams, tables, and rows
+    /// by injecting `margin-top` so elements that would straddle a pixel-slice boundary
+    /// start on the next page instead. Elements taller than a page are left alone
+    /// (no amount of padding fixes them; they will span multiple pages).
+    private func applyBreakInsideAvoidPadding(in webView: WKWebView, pageHeight: CGFloat) async {
+        let js = """
+        (function() {
+            var pageH = \(pageHeight);
+            var selectors = 'img, svg, figure, .mermaid, .plantuml-placeholder, .plantuml-error, table, tr';
+            // Ancestor selectors: if an element's ancestor already appears in our list,
+            // pad the ancestor instead (avoids double-padding nested elements like
+            // an <svg> inside a <.mermaid> div, or a <tr> already handled via <table>).
+            var ancestorSelectors = 'figure, .mermaid, .plantuml-placeholder, .plantuml-error, table';
+
+            function hasMatchingAncestor(el) {
+                var parent = el.parentElement;
+                while (parent) {
+                    if (parent.matches(ancestorSelectors)) return true;
+                    parent = parent.parentElement;
+                }
+                return false;
+            }
+
+            function padStraddlers() {
+                var els = Array.from(document.querySelectorAll(selectors));
+                // Snapshot rects before any writes to avoid reflow mid-loop.
+                var items = els.map(function(el) {
+                    return { el: el, rect: el.getBoundingClientRect() };
+                });
+                var paddedAny = false;
+                items.forEach(function(item) {
+                    var el = item.el;
+                    if (el.getAttribute('data-pdf-padded') === '1') return;
+                    // Skip elements whose ancestor is already in our selector list —
+                    // padding the ancestor will move the child automatically.
+                    if (hasMatchingAncestor(el)) return;
+                    var rect = item.rect;
+                    var h = rect.height;
+                    if (h <= 0 || h >= pageH) return; // zero / oversized — skip
+                    var absTop = rect.top + window.scrollY;
+                    var topPage = Math.floor(absTop / pageH);
+                    var bottomPage = Math.floor((absTop + h - 1) / pageH);
+                    if (topPage === bottomPage) return; // fits on one page already
+                    var pageTop = topPage * pageH;
+                    var offsetInPage = absTop - pageTop;
+                    var push = pageH - offsetInPage;
+                    var current = parseFloat(window.getComputedStyle(el).marginTop) || 0;
+                    el.style.marginTop = (current + push) + 'px';
+                    el.setAttribute('data-pdf-padded', '1');
+                    paddedAny = true;
+                });
+                return paddedAny;
+            }
+
+            // Two passes — subsequent elements shift after the first round of padding.
+            padStraddlers();
+            padStraddlers();
         })();
         """
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
